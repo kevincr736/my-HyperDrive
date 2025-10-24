@@ -1,0 +1,16 @@
+{
+  "server": "HYPERDRIVE HTTP Server",
+  "version": "1.0.0",
+  "status": "online",
+  "endpoints": {
+    "public_files": "/public/*",
+    "static_assets": "Archivos estáticos disponibles"
+  },
+  "features": [
+    "Servir archivos estáticos",
+    "CORS habilitado",
+    "Manejo de errores",
+    "Carpeta pública configurada"
+  ],
+  "timestamp": "2024-01-15T12:00:00.000Z"
+}

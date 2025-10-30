@@ -44,6 +44,8 @@ export default function HomeScreen({ navigation }) {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [monthlyCar, setMonthlyCar] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [models, setModels] = useState([]);
+  const [modelsLoading, setModelsLoading] = useState(true);
 
   // Función para obtener el vehículo mensual
   const fetchMonthlyCar = async () => {
@@ -65,8 +67,30 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  // Función para obtener los MODELOS (tarjetas) con imágenes en base64
+  const fetchHomeModels = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/cars/home_models');
+      const data = await response.json();
+
+      if (data.success && Array.isArray(data.data)) {
+        const mapped = data.data.map((item) => ({
+          title: item.title,
+          price: item.price,
+          imageUri: item.imageBase64,
+        }));
+        setModels(mapped);
+      }
+    } catch (error) {
+      console.error('Error al obtener modelos para home:', error);
+    } finally {
+      setModelsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchMonthlyCar();
+    fetchHomeModels();
   }, []);
 
   return (
@@ -118,14 +142,23 @@ export default function HomeScreen({ navigation }) {
 
             <SectionTitle>MODELOS</SectionTitle>
 
-            <ModelsCarousel
-              data={[
-                { title: 'Lamborghini Revuelto', price: 'FROM $700.000', imageUri: 'https://placehold.co/160x100' },
-                { title: 'Ford Mustang', price: 'FROM $300.000', imageUri: 'https://placehold.co/160x100' },
-                { title: 'Ferrari 296 GTB', price: 'FROM $320.000', imageUri: 'https://placehold.co/160x100' },
-                { title: 'Porsche 911', price: 'FROM $120.000', imageUri: 'https://placehold.co/160x100' },
-              ]}
-            />
+            {modelsLoading ? (
+              <ModelsCarousel
+                data={[
+                  { title: 'Cargando...', price: '', imageUri: 'https://placehold.co/160x100' },
+                ]}
+              />
+            ) : (
+              <ModelsCarousel
+                data={
+                  models.length > 0
+                    ? models
+                    : [
+                        { title: 'Sin modelos', price: '', imageUri: 'https://placehold.co/160x100' },
+                      ]
+                }
+              />
+            )}
 
             <View style={styles.spacingBetweenCarousels} />
             <Text style={styles.rightTitle}>MARCAS Y SUS HISTORIAS</Text>
@@ -188,7 +221,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: { paddingBottom: 24 },
   heroCard: { padding: 16 },
-  heroImage: { width: '100%', height: 220, borderRadius: 12 },
+  heroImage: { width: '100%', height: 250, borderRadius: 12 },
   slogan: {
     marginTop: 12,
     textAlign: 'center',

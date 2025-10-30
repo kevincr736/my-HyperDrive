@@ -1,12 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const MonthlyCar = require('../models/MonthlyCar');
+const Car = require('../models/Car');
 const https = require('https');
 const http = require('http');
 
-// Función para convertir URL de imagen a base64
+// Función para convertir URL de imagen a base64 (o retornar si ya es base64)
 const urlToBase64 = (url) => {
   return new Promise((resolve, reject) => {
+    // Si ya viene en formato data URI base64, devolverlo directamente
+    if (typeof url === 'string' && url.startsWith('data:')) {
+      return resolve(url);
+    }
+
     const protocol = url.startsWith('https') ? https : http;
     
     protocol.get(url, (response) => {
@@ -170,6 +176,124 @@ router.post('/update/monthly_car', async (req, res) => {
   } catch (error) {
     console.error('Error al actualizar vehículo mensual:', error);
     res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+});
+
+// POST /cars/create/featured - Crea una tarjeta destacada (MODELOS)
+// Acepta imageBase64 (data URI) o imageUrl (se convertirá a base64)
+router.post('/create/featured', async (req, res) => {
+  try {
+    const { name, price, maxSpeed, category, imageBase64, imageUrl, description } = req.body || {};
+
+    if (!name || !price || !maxSpeed || !category || (!imageBase64 && !imageUrl)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Faltan parámetros requeridos: name, price, maxSpeed, category y (imageBase64 o imageUrl)'
+      });
+    }
+
+    // Obtener base64 final a partir de imageBase64 o imageUrl
+    let finalBase64;
+    if (imageBase64) {
+      // Si no incluye prefijo data:, agregar uno genérico
+      finalBase64 = imageBase64.startsWith('data:')
+        ? imageBase64
+        : `data:image/png;base64,${imageBase64}`;
+    } else {
+      finalBase64 = await urlToBase64(imageUrl);
+    }
+
+    // Guardar en el campo image como string (puede ser data URI)
+    const car = new Car({
+      name,
+      price,
+      maxSpeed,
+      category: String(category).toLowerCase(),
+      image: finalBase64, // almacenamos base64 en el mismo campo string
+      description: description || '',
+      isFeatured: true,
+      isActive: true,
+      specifications: []
+    });
+
+    await car.save();
+
+    return res.status(201).json({
+      success: true,
+      message: 'Tarjeta destacada creada exitosamente',
+      data: {
+        id: String(car._id),
+        title: car.name,
+        price: car.price,
+        imageBase64: car.image,
+        category: car.category
+      }
+    });
+  } catch (error) {
+    console.error('Error al crear tarjeta destacada:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/cars/home_models - Modelos para la sección MODELOS del Home
+router.get('/home_models', async (req, res) => {
+  try {
+    // 1) Buscar vehículos destacados activos
+    const featured = await Car.findFeatured();
+
+    let models;
+    if (featured && featured.length > 0) {
+      // Convertir imágenes a Base64 al vuelo y mapear al formato esperado
+      const limited = featured.slice(0, 8);
+      models = await Promise.all(limited.map(async (car) => {
+        try {
+          const imageBase64 = await urlToBase64(car.image);
+          return {
+            id: String(car._id),
+            title: car.name,
+            price: car.price,
+            imageBase64,
+            category: car.category
+          };
+        } catch (err) {
+          // Si falla la conversión, devolver un placeholder minimal en base64
+          const placeholderBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWNgYGBgAAAABQABh7j4VQAAAABJRU5ErkJggg==';
+          return {
+            id: String(car._id),
+            title: car.name,
+            price: car.price,
+            imageBase64: placeholderBase64,
+            category: car.category
+          };
+        }
+      }));
+    } else {
+      // 2) Fallback por defecto (4 tarjetas) si no hay destacados en BD
+      const placeholderBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWNgYGBgAAAABQABh7j4VQAAAABJRU5ErkJggg==';
+      models = [
+        { id: 'd1', title: 'Lamborghini Revuelto', price: 'FROM $700.000', imageBase64: placeholderBase64 },
+        { id: 'd2', title: 'Ford Mustang',          price: 'FROM $300.000', imageBase64: placeholderBase64 },
+        { id: 'd3', title: 'Ferrari 296 GTB',       price: 'FROM $320.000', imageBase64: placeholderBase64 },
+        { id: 'd4', title: 'Porsche 911',           price: 'FROM $120.000', imageBase64: placeholderBase64 },
+      ];
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Modelos para home obtenidos correctamente',
+      data: models
+    });
+  } catch (error) {
+    console.error('Error al obtener modelos para home:', error);
+    return res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
       error: error.message

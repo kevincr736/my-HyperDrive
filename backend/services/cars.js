@@ -196,6 +196,17 @@ router.post('/create/featured', async (req, res) => {
       });
     }
 
+    // Validar categoría
+    const validCategories = ['deportivos', 'lujosos', 'clasicos', 'todo-terreno'];
+    const finalCategory = String(category).toLowerCase();
+    
+    if (!validCategories.includes(finalCategory)) {
+      return res.status(400).json({
+        success: false,
+        message: `Categoría inválida. Las categorías válidas son: ${validCategories.join(', ')}`
+      });
+    }
+
     // Obtener base64 final a partir de imageBase64 o imageUrl
     let finalBase64;
     if (imageBase64) {
@@ -212,7 +223,7 @@ router.post('/create/featured', async (req, res) => {
       name,
       price,
       maxSpeed,
-      category: String(category).toLowerCase(),
+      category: finalCategory,
       image: finalBase64, // almacenamos base64 en el mismo campo string
       description: description || '',
       isFeatured: true,
@@ -293,6 +304,86 @@ router.get('/home_models', async (req, res) => {
     });
   } catch (error) {
     console.error('Error al obtener modelos para home:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/cars - Obtener carros filtrados por categoría
+router.get('/', async (req, res) => {
+  try {
+    const { category } = req.query;
+
+    // Validar categoría si se proporciona
+    const validCategories = ['deportivos', 'lujosos', 'clasicos', 'todo-terreno'];
+    
+    let cars;
+    if (category) {
+      const finalCategory = String(category).toLowerCase();
+      
+      if (!validCategories.includes(finalCategory)) {
+        return res.status(400).json({
+          success: false,
+          message: `Categoría inválida. Las categorías válidas son: ${validCategories.join(', ')}`
+        });
+      }
+
+      // Buscar carros por categoría
+      cars = await Car.findByCategory(finalCategory);
+    } else {
+      // Si no se proporciona categoría, devolver todos los carros activos
+      cars = await Car.find({ isActive: true });
+    }
+
+    // Convertir imágenes a Base64 y mapear al formato esperado
+    const carsWithImages = await Promise.all(cars.map(async (car) => {
+      try {
+        const imageBase64 = await urlToBase64(car.image);
+        return {
+          id: String(car._id),
+          name: car.name,
+          price: car.price,
+          maxSpeed: car.maxSpeed,
+          category: car.category,
+          description: car.description,
+          imageBase64,
+          isFeatured: car.isFeatured,
+          specifications: car.specifications,
+          createdAt: car.createdAt,
+          updatedAt: car.updatedAt
+        };
+      } catch (err) {
+        // Si falla la conversión, devolver un placeholder minimal en base64
+        const placeholderBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWNgYGBgAAAABQABh7j4VQAAAABJRU5ErkJggg==';
+        return {
+          id: String(car._id),
+          name: car.name,
+          price: car.price,
+          maxSpeed: car.maxSpeed,
+          category: car.category,
+          description: car.description,
+          imageBase64: placeholderBase64,
+          isFeatured: car.isFeatured,
+          specifications: car.specifications,
+          createdAt: car.createdAt,
+          updatedAt: car.updatedAt
+        };
+      }
+    }));
+
+    return res.status(200).json({
+      success: true,
+      message: category 
+        ? `Carros de la categoría "${category}" obtenidos correctamente`
+        : 'Todos los carros obtenidos correctamente',
+      data: carsWithImages,
+      count: carsWithImages.length
+    });
+  } catch (error) {
+    console.error('Error al obtener carros:', error);
     return res.status(500).json({
       success: false,
       message: 'Error interno del servidor',

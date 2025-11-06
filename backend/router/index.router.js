@@ -6,8 +6,9 @@ const carsRouter = require('./cars.router');
 const loginRouter = require('./login.router');
 const signupRouter = require('./signup.router');
 
-router.use('/cars', carsRouter);
-router.use(loginRouter);
-router.use(signupRouter);
+// Rutas con prefijo /api
+router.use('/api/cars', carsRouter);
+router.use('/api', loginRouter);
+router.use('/api', signupRouter);
 
 module.exports = router;

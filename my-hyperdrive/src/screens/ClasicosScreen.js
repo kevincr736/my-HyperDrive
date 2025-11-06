@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Dimensions,
   SafeAreaView,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -18,114 +19,58 @@ const { width } = Dimensions.get('window');
 
 export default function ClasicosScreen({ navigation }) {
   const [expandedCar, setExpandedCar] = useState(null);
+  const [clasicosData, setClasicosData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const clasicosData = [
-    {
-      id: 1,
-      name: 'Ferrari 250 GTO',
-      price: 'Desde $48.000.000',
-      maxSpeed: '280 km/h',
-      image: require('../../assets/hyper.png'),
-      expanded: true,
-      specifications: [
-        {
-          icon: '🏆',
-          title: 'Leyenda del Automovilismo',
-          description: 'Considerado uno de los autos más hermosos jamás construidos. Solo se fabricaron 36 unidades entre 1962 y 1964.'
-        },
-        {
-          icon: '⚙️',
-          title: 'Motor V12 Colombo',
-          description: 'Motor V12 de 3.0 litros con 300 CV de potencia, equipado con 6 carburadores Weber y distribución por cadena.'
-        },
-        {
-          icon: '🏁',
-          title: 'Historia Competitiva',
-          description: 'Dominó las carreras GT en los años 60, ganando múltiples campeonatos mundiales de constructores.'
-        },
-        {
-          icon: '🔧',
-          title: 'Transmisión Manual',
-          description: 'Transmisión manual de 5 velocidades con diferencial de deslizamiento limitado y frenos de disco en las cuatro ruedas.'
-        }
-      ],
-      carouselImages: [
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png')
-      ]
-    },
-    {
-      id: 2,
-      name: 'Porsche 911 Carrera RS',
-      price: 'Desde $1.200.000',
-      maxSpeed: '245 km/h',
-      image: require('../../assets/hyper.png'),
-      expanded: false,
-      specifications: [
-        {
-          icon: '🐍',
-          title: 'Carrera RS 2.7',
-          description: 'La versión más ligera y potente del 911 clásico, con solo 1,075 kg de peso y 210 CV de potencia.'
-        },
-        {
-          icon: '⚡',
-          title: 'Aerodinámica Única',
-          description: 'Ala trasera característica "ducktail" que generaba downforce a altas velocidades, convirtiéndose en un ícono.'
-        },
-        {
-          icon: '🏁',
-          title: 'Herencia Deportiva',
-          description: 'Diseñado para homologación en carreras, dominó las competencias GT de los años 70 con su agilidad excepcional.'
-        },
-        {
-          icon: '🔧',
-          title: 'Motor Boxer',
-          description: 'Motor boxer de 6 cilindros de 2.7 litros refrigerado por aire, con carburadores Weber y escape deportivo.'
-        }
-      ],
-      carouselImages: [
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png')
-      ]
-    },
-    {
-      id: 3,
-      name: 'Lamborghini Miura P400',
-      price: 'Desde $3.500.000',
-      maxSpeed: '280 km/h',
-      image: require('../../assets/hyper.png'),
-      expanded: false,
-      specifications: [
-        {
-          icon: '🐂',
-          title: 'Primer Superdeportivo',
-          description: 'Considerado el primer superdeportivo de la historia, estableció el patrón para todos los deportivos de motor central.'
-        },
-        {
-          icon: '⚙️',
-          title: 'Motor V12 Central',
-          description: 'Motor V12 de 4.0 litros montado transversalmente, desarrollando 350 CV y conectado a una caja de 5 velocidades.'
-        },
-        {
-          icon: '🎨',
-          title: 'Diseño Revolucionario',
-          description: 'Carrocería diseñada por Marcello Gandini de Bertone, con líneas fluidas que definieron una nueva era del diseño automotriz.'
-        },
-        {
-          icon: '🔧',
-          title: 'Tecnología Avanzada',
-          description: 'Suspensión independiente en las cuatro ruedas, frenos de disco y dirección de cremallera para un manejo excepcional.'
-        }
-      ],
-      carouselImages: [
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png')
-      ]
+  // Función para obtener los carros clásicos del API
+  const fetchClasicos = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('http://localhost:3000/api/cars?category=clasicos');
+      const data = await response.json();
+      
+      if (data.success && Array.isArray(data.data)) {
+        // Mapear los datos del API al formato esperado por el componente
+        const mappedCars = data.data.map((car) => ({
+          id: car.id,
+          name: car.name,
+          price: car.price || 'Precio no disponible',
+          maxSpeed: car.maxSpeed || 'N/A',
+          image: car.imageBase64 ? { uri: car.imageBase64 } : require('../../assets/hyper.png'),
+          specifications: car.specifications && car.specifications.length > 0 
+            ? car.specifications 
+            : [],
+          carouselImages: car.imageBase64 
+            ? [
+                { uri: car.imageBase64 },
+                { uri: car.imageBase64 },
+                { uri: car.imageBase64 }
+              ]
+            : [
+                require('../../assets/hyper.png'),
+                require('../../assets/hyper.png'),
+                require('../../assets/hyper.png')
+              ]
+        }));
+        
+        setClasicosData(mappedCars);
+      } else {
+        setError('No se pudieron cargar los carros clásicos');
+      }
+    } catch (err) {
+      console.error('Error al obtener carros clásicos:', err);
+      setError('Error al conectar con el servidor');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchClasicos();
+  }, []);
 
   const toggleExpanded = (carId) => {
     setExpandedCar(expandedCar === carId ? null : carId);
@@ -240,7 +185,30 @@ export default function ClasicosScreen({ navigation }) {
           style={styles.carsList}
           showsVerticalScrollIndicator={false}
         >
-          {clasicosData.map(renderCarCard)}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#8B0000" />
+              <Text style={styles.loadingText}>Cargando carros clásicos...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <MaterialIcons name="error-outline" size={48} color="#8B0000" />
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={fetchClasicos}
+              >
+                <Text style={styles.retryButtonText}>Reintentar</Text>
+              </TouchableOpacity>
+            </View>
+          ) : clasicosData.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <MaterialIcons name="directions-car" size={48} color="#666" />
+              <Text style={styles.emptyText}>No hay carros clásicos disponibles</Text>
+            </View>
+          ) : (
+            clasicosData.map(renderCarCard)
+          )}
           
           {/* Footer */}
           <Footer />
@@ -445,6 +413,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     backgroundColor: '#1a1a1a',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#8B0000',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    color: '#666',
+    fontSize: 16,
+    marginTop: 16,
+    textAlign: 'center',
   },
 });
 

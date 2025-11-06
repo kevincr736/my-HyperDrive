@@ -50,7 +50,7 @@ export default function HomeScreen({ navigation }) {
   // Función para obtener el vehículo mensual
   const fetchMonthlyCar = async () => {
     try {
-      const response = await fetch('http://localhost:3000/cars/monthly_car');
+      const response = await fetch('http://localhost:3000/api/cars/monthly_car');
       const data = await response.json();
       
       if (data.success) {
@@ -70,7 +70,7 @@ export default function HomeScreen({ navigation }) {
   // Función para obtener los MODELOS (tarjetas) con imágenes en base64
   const fetchHomeModels = async () => {
     try {
-      const response = await fetch('http://localhost:3000/cars/home_models');
+      const response = await fetch('http://localhost:3000/api/cars/home_models');
       const data = await response.json();
 
       if (data.success && Array.isArray(data.data)) {

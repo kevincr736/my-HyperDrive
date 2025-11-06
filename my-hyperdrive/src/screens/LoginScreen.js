@@ -114,8 +114,8 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      console.log('🌐 Enviando petición a:', 'http://localhost:3000/login');
-      const response = await axios.post('http://localhost:3000/login', {
+      console.log('🌐 Enviando petición a:', 'http://localhost:3000/api/login');
+      const response = await axios.post('http://localhost:3000/api/login', {
         email: email,
         password: password
       });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Dimensions,
   SafeAreaView,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -18,114 +19,58 @@ const { width } = Dimensions.get('window');
 
 export default function SuvScreen({ navigation }) {
   const [expandedCar, setExpandedCar] = useState(null);
+  const [suvData, setSuvData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const suvData = [
-    {
-      id: 1,
-      name: 'Lamborghini Urus',
-      price: 'Desde $220.000',
-      maxSpeed: '305 km/h',
-      image: require('../../assets/hyper.png'),
-      expanded: true,
-      specifications: [
-        {
-          icon: '🐂',
-          title: 'Super SUV',
-          description: 'El primer SUV de Lamborghini, combinando la agresividad de un superdeportivo con la versatilidad de un vehículo todo terreno.'
-        },
-        {
-          icon: '⚙️',
-          title: 'Motor V8 Biturbo',
-          description: 'Motor V8 de 4.0 litros con 650 CV de potencia, capaz de acelerar de 0 a 100 km/h en solo 3.6 segundos.'
-        },
-        {
-          icon: '🏔️',
-          title: 'Capacidad Todo Terreno',
-          description: 'Sistema de tracción integral con diferencial central activo y suspensión adaptativa para cualquier tipo de terreno.'
-        },
-        {
-          icon: '🔧',
-          title: 'Tecnología Avanzada',
-          description: 'Sistema de navegación Lamborghini, audio Bang & Olufsen, climatización de 4 zonas y conectividad completa.'
-        }
-      ],
-      carouselImages: [
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png')
-      ]
-    },
-    {
-      id: 2,
-      name: 'Porsche Cayenne Turbo',
-      price: 'Desde $130.000',
-      maxSpeed: '286 km/h',
-      image: require('../../assets/hyper.png'),
-      expanded: false,
-      specifications: [
-        {
-          icon: '🏆',
-          title: 'Performance SUV',
-          description: 'La combinación perfecta entre deportividad y practicidad, diseñado para aquellos que no quieren comprometer el rendimiento.'
-        },
-        {
-          icon: '⚙️',
-          title: 'Motor V8 Biturbo',
-          description: 'Motor V8 de 4.0 litros con 550 CV de potencia, equipado con sistema de inyección directa y distribución variable.'
-        },
-        {
-          icon: '🌲',
-          title: 'Versatilidad Total',
-          description: 'Suspensión de aire adaptativa, sistema de tracción integral Porsche y modo Off-Road para aventuras extremas.'
-        },
-        {
-          icon: '🔧',
-          title: 'Interior Deportivo',
-          description: 'Interior con cuero deportivo, asientos con ajuste eléctrico, sistema de audio Bose y navegación Porsche Connect.'
-        }
-      ],
-      carouselImages: [
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png')
-      ]
-    },
-    {
-      id: 3,
-      name: 'Range Rover Sport SVR',
-      price: 'Desde $115.000',
-      maxSpeed: '283 km/h',
-      image: require('../../assets/hyper.png'),
-      expanded: false,
-      specifications: [
-        {
-          icon: '🦁',
-          title: 'Lujo y Aventura',
-          description: 'El SUV de lujo más capaz del mundo, combinando elegancia británica con capacidades todo terreno excepcionales.'
-        },
-        {
-          icon: '⚙️',
-          title: 'Motor V8 Supercharged',
-          description: 'Motor V8 de 5.0 litros con 575 CV de potencia, desarrollado específicamente para máxima performance y eficiencia.'
-        },
-        {
-          icon: '🏔️',
-          title: 'Capacidades Off-Road',
-          description: 'Sistema Terrain Response 2, suspensión de aire adaptativa y tracción integral permanente para cualquier desafío.'
-        },
-        {
-          icon: '🔧',
-          title: 'Tecnología de Vanguardia',
-          description: 'Sistema de infoentretenimiento Touch Pro Duo, audio Meridian, climatización de 4 zonas y conectividad 4G.'
-        }
-      ],
-      carouselImages: [
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png')
-      ]
+  // Función para obtener los carros todo terreno del API
+  const fetchSuvs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('http://localhost:3000/api/cars?category=todo-terreno');
+      const data = await response.json();
+      
+      if (data.success && Array.isArray(data.data)) {
+        // Mapear los datos del API al formato esperado por el componente
+        const mappedCars = data.data.map((car) => ({
+          id: car.id,
+          name: car.name,
+          price: car.price || 'Precio no disponible',
+          maxSpeed: car.maxSpeed || 'N/A',
+          image: car.imageBase64 ? { uri: car.imageBase64 } : require('../../assets/hyper.png'),
+          specifications: car.specifications && car.specifications.length > 0 
+            ? car.specifications 
+            : [],
+          carouselImages: car.imageBase64 
+            ? [
+                { uri: car.imageBase64 },
+                { uri: car.imageBase64 },
+                { uri: car.imageBase64 }
+              ]
+            : [
+                require('../../assets/hyper.png'),
+                require('../../assets/hyper.png'),
+                require('../../assets/hyper.png')
+              ]
+        }));
+        
+        setSuvData(mappedCars);
+      } else {
+        setError('No se pudieron cargar los carros todo terreno');
+      }
+    } catch (err) {
+      console.error('Error al obtener carros todo terreno:', err);
+      setError('Error al conectar con el servidor');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchSuvs();
+  }, []);
 
   const toggleExpanded = (carId) => {
     setExpandedCar(expandedCar === carId ? null : carId);
@@ -240,7 +185,30 @@ export default function SuvScreen({ navigation }) {
           style={styles.carsList}
           showsVerticalScrollIndicator={false}
         >
-          {suvData.map(renderCarCard)}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#8B0000" />
+              <Text style={styles.loadingText}>Cargando carros todo terreno...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <MaterialIcons name="error-outline" size={48} color="#8B0000" />
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={fetchSuvs}
+              >
+                <Text style={styles.retryButtonText}>Reintentar</Text>
+              </TouchableOpacity>
+            </View>
+          ) : suvData.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <MaterialIcons name="directions-car" size={48} color="#666" />
+              <Text style={styles.emptyText}>No hay carros todo terreno disponibles</Text>
+            </View>
+          ) : (
+            suvData.map(renderCarCard)
+          )}
           
           {/* Footer */}
           <Footer />
@@ -445,5 +413,53 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     backgroundColor: '#1a1a1a',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#8B0000',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    color: '#666',
+    fontSize: 16,
+    marginTop: 16,
+    textAlign: 'center',
   },
 });

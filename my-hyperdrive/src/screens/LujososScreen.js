@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Dimensions,
   SafeAreaView,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -18,114 +19,58 @@ const { width } = Dimensions.get('window');
 
 export default function LujososScreen({ navigation }) {
   const [expandedCar, setExpandedCar] = useState(null);
+  const [lujososData, setLujososData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const lujososData = [
-    {
-      id: 1,
-      name: 'Rolls-Royce Phantom',
-      price: 'Desde $450.000',
-      maxSpeed: '250 km/h',
-      image: require('../../assets/hyper.png'),
-      expanded: true,
-      specifications: [
-        {
-          icon: '👑',
-          title: 'Lujo Supremo',
-          description: 'El automóvil de lujo más exclusivo del mundo, con acabados artesanales únicos y materiales de la más alta calidad.'
-        },
-        {
-          icon: '⚙️',
-          title: 'Motor V12 Twin Turbo',
-          description: 'Motor V12 de 6.75 litros con 563 CV de potencia, diseñado para proporcionar un silencio absoluto y suavidad excepcional.'
-        },
-        {
-          icon: '🛋️',
-          title: 'Interior Personalizado',
-          description: 'Interior completamente personalizable con cuero de la más alta calidad, madera noble y detalles metálicos únicos.'
-        },
-        {
-          icon: '🔧',
-          title: 'Tecnología Avanzada',
-          description: 'Sistema de suspensión Magic Carpet Ride, climatización de 4 zonas y sistema de entretenimiento de última generación.'
-        }
-      ],
-      carouselImages: [
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png')
-      ]
-    },
-    {
-      id: 2,
-      name: 'Bentley Continental GT',
-      price: 'Desde $200.000',
-      maxSpeed: '333 km/h',
-      image: require('../../assets/hyper.png'),
-      expanded: false,
-      specifications: [
-        {
-          icon: '🏆',
-          title: 'Gran Turismo de Lujo',
-          description: 'La combinación perfecta entre lujo británico y performance deportiva, diseñado para viajes largos con máxima comodidad.'
-        },
-        {
-          icon: '⚙️',
-          title: 'Motor W12 Biturbo',
-          description: 'Motor W12 de 6.0 litros con 626 CV de potencia, capaz de acelerar de 0 a 100 km/h en solo 3.7 segundos.'
-        },
-        {
-          icon: '💎',
-          title: 'Acabados Exclusivos',
-          description: 'Interior con cuero Mulliner, madera veneciana, detalles cromados y opciones de personalización ilimitadas.'
-        },
-        {
-          icon: '🔧',
-          title: 'Tecnología de Vanguardia',
-          description: 'Suspensión adaptativa de 3 cámaras, sistema de navegación Bentley, audio Naim y conectividad completa.'
-        }
-      ],
-      carouselImages: [
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png')
-      ]
-    },
-    {
-      id: 3,
-      name: 'Aston Martin DB11',
-      price: 'Desde $250.000',
-      maxSpeed: '322 km/h',
-      image: require('../../assets/hyper.png'),
-      expanded: false,
-      specifications: [
-        {
-          icon: '🎭',
-          title: 'Elegancia Británica',
-          description: 'Diseño atemporal que combina elegancia clásica con tecnología moderna, representando lo mejor del lujo deportivo británico.'
-        },
-        {
-          icon: '⚙️',
-          title: 'Motor V12 Biturbo',
-          description: 'Motor V12 de 5.2 litros con 630 CV de potencia, desarrollado en colaboración con Mercedes-AMG para máximo rendimiento.'
-        },
-        {
-          icon: '🛡️',
-          title: 'Construcción Avanzada',
-          description: 'Chasis de aluminio con carrocería de fibra de carbono, proporcionando rigidez excepcional y peso reducido.'
-        },
-        {
-          icon: '🔧',
-          title: 'Interior de Lujo',
-          description: 'Interior con cuero Bridge of Weir, detalles de aluminio, sistema de audio Bang & Olufsen y climatización de 3 zonas.'
-        }
-      ],
-      carouselImages: [
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png')
-      ]
+  // Función para obtener los carros lujosos del API
+  const fetchLujosos = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('http://localhost:3000/api/cars?category=lujosos');
+      const data = await response.json();
+      
+      if (data.success && Array.isArray(data.data)) {
+        // Mapear los datos del API al formato esperado por el componente
+        const mappedCars = data.data.map((car) => ({
+          id: car.id,
+          name: car.name,
+          price: car.price || 'Precio no disponible',
+          maxSpeed: car.maxSpeed || 'N/A',
+          image: car.imageBase64 ? { uri: car.imageBase64 } : require('../../assets/hyper.png'),
+          specifications: car.specifications && car.specifications.length > 0 
+            ? car.specifications 
+            : [],
+          carouselImages: car.imageBase64 
+            ? [
+                { uri: car.imageBase64 },
+                { uri: car.imageBase64 },
+                { uri: car.imageBase64 }
+              ]
+            : [
+                require('../../assets/hyper.png'),
+                require('../../assets/hyper.png'),
+                require('../../assets/hyper.png')
+              ]
+        }));
+        
+        setLujososData(mappedCars);
+      } else {
+        setError('No se pudieron cargar los carros lujosos');
+      }
+    } catch (err) {
+      console.error('Error al obtener carros lujosos:', err);
+      setError('Error al conectar con el servidor');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchLujosos();
+  }, []);
 
   const toggleExpanded = (carId) => {
     setExpandedCar(expandedCar === carId ? null : carId);
@@ -240,7 +185,30 @@ export default function LujososScreen({ navigation }) {
           style={styles.carsList}
           showsVerticalScrollIndicator={false}
         >
-          {lujososData.map(renderCarCard)}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#8B0000" />
+              <Text style={styles.loadingText}>Cargando carros lujosos...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <MaterialIcons name="error-outline" size={48} color="#8B0000" />
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={fetchLujosos}
+              >
+                <Text style={styles.retryButtonText}>Reintentar</Text>
+              </TouchableOpacity>
+            </View>
+          ) : lujososData.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <MaterialIcons name="directions-car" size={48} color="#666" />
+              <Text style={styles.emptyText}>No hay carros lujosos disponibles</Text>
+            </View>
+          ) : (
+            lujososData.map(renderCarCard)
+          )}
           
           {/* Footer */}
           <Footer />
@@ -445,6 +413,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     backgroundColor: '#1a1a1a',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#8B0000',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    color: '#666',
+    fontSize: 16,
+    marginTop: 16,
+    textAlign: 'center',
   },
 });
 

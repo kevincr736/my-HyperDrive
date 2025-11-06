@@ -126,8 +126,8 @@ export default function SignUpScreen() {
     setLoading(true);
 
     try {
-      console.log('🌐 Enviando petición a:', 'http://localhost:3000/signup');
-      const response = await axios.post('http://localhost:3000/signup', formData);
+      console.log('🌐 Enviando petición a:', 'http://localhost:3000/api/signup');
+      const response = await axios.post('http://localhost:3000/api/signup', formData);
       
       console.log('📥 Respuesta recibida:', response.data);
 

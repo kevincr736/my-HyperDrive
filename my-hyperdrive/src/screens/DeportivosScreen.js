@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Dimensions,
   SafeAreaView,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -18,114 +19,58 @@ const { width } = Dimensions.get('window');
 
 export default function DeportivosScreen({ navigation }) {
   const [expandedCar, setExpandedCar] = useState(null);
+  const [deportivosData, setDeportivosData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const deportivosData = [
-    {
-      id: 1,
-      name: 'Ferrari SF90 Stradale',
-      price: 'Desde $520.000',
-      maxSpeed: '340 km/h',
-      image: require('../../assets/hyper.png'),
-      expanded: true,
-      specifications: [
-        {
-          icon: '⚙️',
-          title: 'Motor De Combustión',
-          description: 'Motor V8 Biturbo De 4.0L (Proyecto F154 FA) Con Una Potencia De Aproximadamente 780 CV (760-700 Hp)'
-        },
-        {
-          icon: '⚡',
-          title: 'Potencia Combinada',
-          description: 'Alcanza Cerca De 985 CV. Aproximadamente 1000-CV'
-        },
-        {
-          icon: '🌪️',
-          title: 'Aerodinámica Avanzada',
-          description: 'Genera Hasta 200 Kg De Carga Aerodinámica A 250 Km/h. Cuenta Con Un Alerón Trasero De Dos Piezas Con Sistema "Shut-Off Gurney" Inspirado En El DRS De F1'
-        },
-        {
-          icon: '🔧',
-          title: 'Transmisión',
-          description: 'Caja De Doble Embrague De 8 Marchas, Más Ligera Y Compacta, Sin Marcha Atrás (Los Motores Eléctricos En Las Ruedas Delanteras Cumplen Esta Función). Cambios Un 30% Más Rápidos (~200 Ms)'
-        }
-      ],
-      carouselImages: [
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png')
-      ]
-    },
-    {
-      id: 2,
-      name: 'Corvette GT',
-      price: 'Desde $720.000',
-      maxSpeed: '430 km/h',
-      image: require('../../assets/hyper.png'),
-      expanded: false,
-      specifications: [
-        {
-          icon: '🏎️',
-          title: 'Motor V8 LT2',
-          description: 'Motor V8 de 6.2 litros con 495 CV de potencia, equipado con sistema de inyección directa y distribución variable de válvulas.'
-        },
-        {
-          icon: '⚡',
-          title: 'Aceleración',
-          description: '0-100 km/h en 2.8 segundos, 0-200 km/h en 8.9 segundos. Una de las aceleraciones más impresionantes del mercado.'
-        },
-        {
-          icon: '🌪️',
-          title: 'Aerodinámica Activa',
-          description: 'Sistema de aerodinámica activa con alerón trasero automático que se ajusta según la velocidad y condiciones de conducción.'
-        },
-        {
-          icon: '🔧',
-          title: 'Transmisión DCT',
-          description: 'Transmisión de doble embrague de 8 velocidades con cambios ultrarrápidos y modo de conducción Track para máxima performance.'
-        }
-      ],
-      carouselImages: [
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png')
-      ]
-    },
-    {
-      id: 3,
-      name: 'Ford Mustang GT',
-      price: 'Desde $420.000',
-      maxSpeed: '320 km/h',
-      image: require('../../assets/hyper.png'),
-      expanded: false,
-      specifications: [
-        {
-          icon: '🐎',
-          title: 'Motor V8 Coyote',
-          description: 'Motor V8 Coyote de 5.0 litros con 460 CV de potencia, equipado con sistema de admisión variable y escape activo.'
-        },
-        {
-          icon: '⚡',
-          title: 'Performance',
-          description: '0-100 km/h en 4.3 segundos, 0-200 km/h en 12.4 segundos. Potencia y torque excepcionales para su segmento.'
-        },
-        {
-          icon: '🎯',
-          title: 'Manejo Preciso',
-          description: 'Suspensión independiente en las cuatro ruedas con sistema MagneRide adaptativo para un manejo deportivo excepcional.'
-        },
-        {
-          icon: '🔧',
-          title: 'Transmisión Manual',
-          description: 'Transmisión manual de 6 velocidades Getrag con embrague hidráulico y diferencial de deslizamiento limitado.'
-        }
-      ],
-      carouselImages: [
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png'),
-        require('../../assets/hyper.png')
-      ]
+  // Función para obtener los carros deportivos del API
+  const fetchDeportivos = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('http://localhost:3000/api/cars?category=deportivos');
+      const data = await response.json();
+      
+      if (data.success && Array.isArray(data.data)) {
+        // Mapear los datos del API al formato esperado por el componente
+        const mappedCars = data.data.map((car) => ({
+          id: car.id,
+          name: car.name,
+          price: car.price || 'Precio no disponible',
+          maxSpeed: car.maxSpeed || 'N/A',
+          image: car.imageBase64 ? { uri: car.imageBase64 } : require('../../assets/hyper.png'),
+          specifications: car.specifications && car.specifications.length > 0 
+            ? car.specifications 
+            : [],
+          carouselImages: car.imageBase64 
+            ? [
+                { uri: car.imageBase64 },
+                { uri: car.imageBase64 },
+                { uri: car.imageBase64 }
+              ]
+            : [
+                require('../../assets/hyper.png'),
+                require('../../assets/hyper.png'),
+                require('../../assets/hyper.png')
+              ]
+        }));
+        
+        setDeportivosData(mappedCars);
+      } else {
+        setError('No se pudieron cargar los carros deportivos');
+      }
+    } catch (err) {
+      console.error('Error al obtener carros deportivos:', err);
+      setError('Error al conectar con el servidor');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchDeportivos();
+  }, []);
 
   const toggleExpanded = (carId) => {
     setExpandedCar(expandedCar === carId ? null : carId);
@@ -240,7 +185,30 @@ export default function DeportivosScreen({ navigation }) {
           style={styles.carsList}
           showsVerticalScrollIndicator={false}
         >
-          {deportivosData.map(renderCarCard)}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#8B0000" />
+              <Text style={styles.loadingText}>Cargando carros deportivos...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <MaterialIcons name="error-outline" size={48} color="#8B0000" />
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={fetchDeportivos}
+              >
+                <Text style={styles.retryButtonText}>Reintentar</Text>
+              </TouchableOpacity>
+            </View>
+          ) : deportivosData.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <MaterialIcons name="directions-car" size={48} color="#666" />
+              <Text style={styles.emptyText}>No hay carros deportivos disponibles</Text>
+            </View>
+          ) : (
+            deportivosData.map(renderCarCard)
+          )}
           
           {/* Footer */}
           <Footer />
@@ -445,5 +413,53 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     backgroundColor: '#1a1a1a',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#8B0000',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    color: '#666',
+    fontSize: 16,
+    marginTop: 16,
+    textAlign: 'center',
   },
 });

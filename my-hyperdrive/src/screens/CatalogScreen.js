@@ -1,42 +1,56 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Video, ResizeMode } from 'expo-av';
 import Footer from '../components/Footer';
 import { colors } from '../theme/colors';
 
 export default function CatalogScreen({ navigation }) {
+  const videoRefs = useRef({});
+
   const categories = [
     {
       id: 1,
       title: 'DEPORTIVOS',
-      image: 'https://placehold.co/350x200/FF0000/FFFFFF?text=Deportivos',
+      video: null, // Por ahora sin video, se puede agregar después
       position: 'bottom-right',
       screen: 'Deportivos'
     },
     {
       id: 2,
       title: 'CLASICOS',
-      image: 'https://placehold.co/350x200/CC0000/FFFFFF?text=Clasicos',
+      video: require('../../assets/clasicc.mp4'), // Video de prueba
       position: 'top-left',
       screen: 'Clasicos'
     },
     {
       id: 3,
       title: 'LUJOSOS',
-      image: 'https://placehold.co/350x200/990000/FFFFFF?text=Lujosos',
+      video: null, // Por ahora sin video, se puede agregar después
       position: 'top-right',
       screen: 'Lujosos'
     },
     {
       id: 4,
       title: 'TODO TERRENO',
-      image: 'https://placehold.co/350x200/660000/FFFFFF?text=Todo%20Terreno',
+      video: null, // Por ahora sin video, se puede agregar después
       position: 'top-left',
       screen: 'Suv'
     }
   ];
+
+  useEffect(() => {
+    // Limpiar al desmontar
+    return () => {
+      Object.values(videoRefs.current).forEach((ref) => {
+        if (ref) {
+          ref.unloadAsync().catch(() => {});
+        }
+      });
+    };
+  }, []);
 
   const getTitleStyle = (position) => {
     switch (position) {
@@ -90,7 +104,31 @@ export default function CatalogScreen({ navigation }) {
           
           {categories.map((category) => (
             <View key={category.id} style={styles.categoryCard}>
-              <Image source={{ uri: category.image }} style={styles.categoryImage} />
+              {category.video ? (
+                <Video
+                  ref={(ref) => {
+                    videoRefs.current[category.id] = ref;
+                  }}
+                  source={category.video}
+                  style={styles.categoryVideo}
+                  resizeMode={ResizeMode.CONTAIN}
+                  shouldPlay
+                  isLooping
+                  isMuted
+                  useNativeControls={false}
+                  onLoad={() => {
+                    // Asegurar que el video se reproduzca cuando esté listo
+                    if (videoRefs.current[category.id]) {
+                      videoRefs.current[category.id].playAsync().catch(() => {});
+                    }
+                  }}
+                />
+              ) : (
+                <View style={styles.categoryPlaceholder}>
+                  <MaterialIcons name="videocam-off" size={48} color="#666" />
+                  <Text style={styles.placeholderText}>Video no disponible</Text>
+                </View>
+              )}
               <Text style={[styles.categoryTitle, getTitleStyle(category.position)]}>
                 {category.title}
               </Text>
@@ -212,10 +250,23 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
-  categoryImage: {
+  categoryVideo: {
     width: '100%',
     height: 200,
     borderRadius: 12,
+  },
+  categoryPlaceholder: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: '#1a1a1a',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    color: '#666',
+    fontSize: 14,
+    marginTop: 8,
   },
   categoryTitle: {
     fontSize: 24,

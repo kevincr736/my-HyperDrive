@@ -8,7 +8,6 @@ export default function SideMenu({ isVisible, onClose, onNavigate }) {
     { id: 'home', title: 'Inicio', icon: 'home', screen: 'Home' },
     { id: 'catalog', title: 'Catálogo', icon: 'view-module', screen: 'Catalog' },
     { id: 'news', title: 'Noticias', icon: 'article', screen: 'News' },
-    { id: 'brands', title: 'Marcas', icon: 'business', screen: 'BrandHistory' },
     { id: 'profile', title: 'Perfil', icon: 'person', screen: 'Profile' },
   ];
 

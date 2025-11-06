@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -7,110 +7,109 @@ import Footer from '../components/Footer';
 import SideMenu from '../components/SideMenu';
 import { colors } from '../theme/colors';
 
-export default function BrandHistoryScreen({ navigation, route }) {
-  const { brandName = 'Lamborghini' } = route?.params || {};
-  const [isMenuVisible, setIsMenuVisible] = useState(false);
+// Componente para manejar imágenes base64
+const Base64Image = ({ base64String, style, ...props }) => {
+  const [imageError, setImageError] = useState(false);
+  
+  if (imageError || !base64String) {
+    return (
+      <View style={[style, { backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: '#666', fontSize: 14 }}>Imagen no disponible</Text>
+      </View>
+    );
+  }
 
-  const brandData = {
-    Lamborghini: {
-      logo: 'https://placehold.co/120x120/FFD700/000000?text=L',
-      image: 'https://placehold.co/350x200/FF4500/FFFFFF?text=Lamborghini+Revuelto',
-      name: 'LAMBORGHINI',
-      timeline: [
-        {
-          year: '1963',
-          title: 'Fundación',
-          description: 'Ferruccio Lamborghini funda la empresa en Sant\'Agata Bolognese, Italia, con el objetivo de crear el mejor GT del mundo.'
-        },
-        {
-          year: '1966',
-          title: 'Miura P400',
-          description: 'Unión Central Transversal, Motor V12, Capaz de 300 km/h. El primer superdeportivo de la historia.'
-        },
-        {
-          year: '1978',
-          title: 'Crisis & administración',
-          description: 'La empresa entra en crisis financiera y es puesta bajo administración judicial.'
-        },
-        {
-          year: '1980',
-          title: 'Chrysler compra',
-          description: 'Chrysler Corporation adquiere Lamborghini, iniciando una nueva era de desarrollo.'
-        },
-        {
-          year: '1998',
-          title: 'Audi (VW Group)',
-          description: 'Volkswagen Group a través de Audi adquiere Lamborghini, marcando el inicio de una nueva era de innovación.'
-        },
-        {
-          year: '2003',
-          title: 'Gallardo',
-          description: 'Lanzamiento del Gallardo, el modelo más exitoso de la historia de la marca con más de 14,000 unidades vendidas.'
-        },
-        {
-          year: '2007',
-          title: 'Reventón',
-          description: 'Presentación del Reventón, un superdeportivo limitado que combina diseño futurista con tecnología de vanguardia.'
-        },
-        {
-          year: '2017/18',
-          title: 'Urus',
-          description: 'Lanzamiento del Urus, el primer SUV de Lamborghini que revoluciona el segmento de vehículos de lujo todo terreno.'
-        }
-      ],
-      featuredModels: [
-        { name: 'REVUELTO', year: '2023', image: 'https://placehold.co/150x100/FF4500/FFFFFF?text=Revuelto' },
-        { name: 'VENENO', year: '2013', image: 'https://placehold.co/150x100/8A8A8A/FFFFFF?text=Veneno' },
-        { name: 'URUS', year: '2018', image: 'https://placehold.co/150x100/FFD700/000000?text=Urus' },
-        { name: 'HURACAN', year: '2014', image: 'https://placehold.co/150x100/FF4500/FFFFFF?text=Huracan' }
-      ]
-    },
-    Ferrari: {
-      logo: 'https://placehold.co/120x120/EF0303/FFFFFF?text=F',
-      image: 'https://placehold.co/350x200/EF0303/FFFFFF?text=Ferrari+SF90',
-      name: 'FERRARI',
-      timeline: [
-        {
-          year: '1947',
-          title: 'Primer Ferrari',
-          description: 'Enzo Ferrari presenta el 125 S, el primer automóvil con el nombre Ferrari.'
-        },
-        {
-          year: '1950',
-          title: 'F1 Debut',
-          description: 'Ferrari hace su debut en la Fórmula 1, comenzando una leyenda en el automovilismo.'
-        },
-        {
-          year: '1962',
-          title: '250 GTO',
-          description: 'Lanzamiento del legendario 250 GTO, considerado uno de los autos más hermosos jamás construidos.'
-        },
-        {
-          year: '1987',
-          title: 'F40',
-          description: 'Presentación del F40, el último superdeportivo aprobado por Enzo Ferrari antes de su muerte.'
-        },
-        {
-          year: '2002',
-          title: 'Enzo Ferrari',
-          description: 'Lanzamiento del Enzo, un superdeportivo de edición limitada que honra al fundador de la marca.'
-        },
-        {
-          year: '2013',
-          title: 'LaFerrari',
-          description: 'Presentación del LaFerrari, el primer híbrido de la marca con tecnología F1.'
-        }
-      ],
-      featuredModels: [
-        { name: 'SF90', year: '2019', image: 'https://placehold.co/150x100/EF0303/FFFFFF?text=SF90' },
-        { name: 'F8 TRIBUTO', year: '2019', image: 'https://placehold.co/150x100/EF0303/FFFFFF?text=F8' },
-        { name: 'ROMA', year: '2019', image: 'https://placehold.co/150x100/EF0303/FFFFFF?text=Roma' },
-        { name: 'PORTOFINO', year: '2017', image: 'https://placehold.co/150x100/EF0303/FFFFFF?text=Portofino' }
-      ]
+  return (
+    <Image
+      source={{ uri: base64String }}
+      style={style}
+      onError={() => setImageError(true)}
+      {...props}
+    />
+  );
+};
+
+export default function BrandHistoryScreen({ navigation, route }) {
+  const { brandName, brandId } = route?.params || {};
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [brand, setBrand] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Función para obtener la marca desde el API
+  const fetchBrand = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      let url;
+      if (brandId) {
+        // Si tenemos ID, buscar por ID
+        url = `http://localhost:3000/api/brands/${brandId}`;
+      } else if (brandName) {
+        // Si tenemos nombre, buscar por nombre
+        url = `http://localhost:3000/api/brands/name/${encodeURIComponent(brandName)}`;
+      } else {
+        throw new Error('Se requiere brandName o brandId');
+      }
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.success) {
+        setBrand(data.data);
+      } else {
+        setError(data.message || 'Error al obtener la marca');
+      }
+    } catch (err) {
+      console.error('Error al obtener marca:', err);
+      setError(err.message || 'Error al cargar la marca');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const currentBrand = brandData[brandName] || brandData.Lamborghini;
+  useEffect(() => {
+    fetchBrand();
+  }, [brandName, brandId]);
+
+  if (loading) {
+    return (
+      <LinearGradient colors={["#0a0a0a", "#040404"]} style={styles.root}>
+        <SafeAreaView style={{ flex: 1 }}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.accentRed} />
+            <Text style={styles.loadingText}>Cargando marca...</Text>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
+
+  if (error || !brand) {
+    return (
+      <LinearGradient colors={["#0a0a0a", "#040404"]} style={styles.root}>
+        <SafeAreaView style={{ flex: 1 }}>
+          <View style={styles.errorContainer}>
+            <MaterialIcons name="error-outline" size={48} color={colors.accentRed} />
+            <Text style={styles.errorText}>{error || 'Marca no encontrada'}</Text>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={fetchBrand}
+            >
+              <Text style={styles.retryButtonText}>Reintentar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.backButtonText}>Volver</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient colors={["#0a0a0a", "#040404"]} style={styles.root}>
@@ -131,62 +130,61 @@ export default function BrandHistoryScreen({ navigation, route }) {
 
           {/* Hero Image */}
           <View style={styles.heroSection}>
-            <Image source={{ uri: currentBrand.image }} style={styles.heroImage} />
+            <Base64Image 
+              base64String={brand.carImage}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
           </View>
 
           {/* Brand Logo and Name */}
           <View style={styles.brandSection}>
-            <Image source={{ uri: currentBrand.logo }} style={styles.brandLogo} />
-            <Text style={styles.brandName}>{currentBrand.name}</Text>
+            <Base64Image 
+              base64String={brand.logo}
+              style={styles.brandLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.brandName}>{brand.name}</Text>
+            {brand.description && (
+              <Text style={styles.brandDescription}>{brand.description}</Text>
+            )}
           </View>
 
           {/* Timeline */}
           <View style={styles.timelineSection}>
             <Text style={styles.timelineTitle}>HISTORIA</Text>
             <View style={styles.timeline}>
-              {currentBrand.timeline.map((item, index) => (
-                <View key={index} style={styles.timelineItem}>
-                  <View style={styles.timelineLeft}>
-                    <Text style={styles.timelineYear}>{item.year}</Text>
+              {brand.timeline && brand.timeline.length > 0 ? (
+                brand.timeline.map((item, index) => (
+                  <View key={index} style={styles.timelineItem}>
+                    <View style={styles.timelineLeft}>
+                      <Text style={styles.timelineYear}>{item.year}</Text>
+                    </View>
+                    <View style={styles.timelineCenter}>
+                      <View style={styles.timelineDot} />
+                      {index < brand.timeline.length - 1 && <View style={styles.timelineLine} />}
+                    </View>
+                    <View style={styles.timelineRight}>
+                      <Text style={styles.timelineItemTitle}>{item.title}</Text>
+                      <Text style={styles.timelineItemDescription}>{item.description}</Text>
+                    </View>
                   </View>
-                  <View style={styles.timelineCenter}>
-                    <View style={styles.timelineDot} />
-                    {index < currentBrand.timeline.length - 1 && <View style={styles.timelineLine} />}
-                  </View>
-                  <View style={styles.timelineRight}>
-                    <Text style={styles.timelineItemTitle}>{item.title}</Text>
-                    <Text style={styles.timelineItemDescription}>{item.description}</Text>
-                  </View>
-                </View>
-              ))}
+                ))
+              ) : (
+                <Text style={styles.noTimelineText}>No hay información de timeline disponible</Text>
+              )}
             </View>
           </View>
 
-          {/* Featured Models */}
-          <View style={styles.modelsSection}>
-            <View style={styles.modelsHeader}>
-              <Text style={styles.modelsTitle}>MODELOS DESTACADOS</Text>
-              <TouchableOpacity 
-                style={styles.backButton}
-                onPress={() => navigation.goBack()}
-              >
-                <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.modelsCarousel}
+          {/* Back Button */}
+          <View style={styles.backSection}>
+            <TouchableOpacity 
+              style={styles.backButtonContainer}
+              onPress={() => navigation.goBack()}
             >
-              {currentBrand.featuredModels.map((model, index) => (
-                <View key={index} style={styles.modelCard}>
-                  <Image source={{ uri: model.image }} style={styles.modelImage} />
-                  <Text style={styles.modelName}>{model.name}</Text>
-                  <Text style={styles.modelYear}>{model.year}</Text>
-                </View>
-              ))}
-            </ScrollView>
+              <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
+              <Text style={styles.backButtonText}>Volver</Text>
+            </TouchableOpacity>
           </View>
 
           <Footer />
@@ -225,8 +223,7 @@ const styles = StyleSheet.create({
   heroImage: { 
     width: '100%', 
     height: 200, 
-    borderRadius: 12,
-    backgroundColor: '#D9D9D9'
+    borderRadius: 12
   },
 
   brandSection: { 
@@ -244,7 +241,16 @@ const styles = StyleSheet.create({
     color: colors.textPrimary, 
     fontSize: 24, 
     fontWeight: '800',
-    textAlign: 'center'
+    textAlign: 'center',
+    marginTop: 8
+  },
+  brandDescription: {
+    color: colors.textMuted,
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
+    paddingHorizontal: 20,
+    lineHeight: 20
   },
 
   timelineSection: { paddingHorizontal: 20, marginBottom: 30 },
@@ -305,50 +311,66 @@ const styles = StyleSheet.create({
     lineHeight: 18 
   },
 
-  modelsSection: { paddingHorizontal: 20, marginBottom: 20 },
-  modelsHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center',
-    marginBottom: 16
-  },
-  modelsTitle: { 
-    color: colors.textPrimary, 
-    fontSize: 16, 
-    fontWeight: '800' 
-  },
-  backButton: { 
-    padding: 8,
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-  modelsCarousel: { paddingRight: 20 },
-  modelCard: { 
-    width: 140, 
-    marginRight: 16, 
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12, 
-    borderWidth: 1, 
-    borderColor: '#FFFFFF',
-    padding: 12,
+  backSection: { 
+    paddingHorizontal: 20, 
+    marginBottom: 20,
     alignItems: 'center'
   },
-  modelImage: { 
-    width: '100%', 
-    height: 80, 
-    borderRadius: 8, 
-    marginBottom: 8,
-    backgroundColor: '#D9D9D9'
+  backButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FFFFFF'
   },
-  modelName: { 
-    color: colors.textPrimary, 
-    fontSize: 12, 
-    fontWeight: '700',
+  backButtonText: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8
+  },
+  noTimelineText: {
+    color: colors.textMuted,
+    fontSize: 14,
     textAlign: 'center',
-    marginBottom: 4
+    padding: 20
   },
-  modelYear: { 
-    color: colors.textMuted, 
-    fontSize: 10 
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  loadingText: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    marginTop: 12
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  errorText: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 20
+  },
+  retryButton: {
+    padding: 12,
+    backgroundColor: colors.accentRed,
+    borderRadius: 8,
+    marginBottom: 12,
+    minWidth: 120
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center'
   },
 });

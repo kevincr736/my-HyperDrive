@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Modal, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Modal, Dimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -7,12 +7,37 @@ import Footer from '../components/Footer';
 import SideMenu from '../components/SideMenu';
 import { colors } from '../theme/colors';
 
+// Componente para manejar imágenes base64
+const Base64Image = ({ base64String, style, ...props }) => {
+  const [imageError, setImageError] = useState(false);
+  
+  if (imageError || !base64String) {
+    return (
+      <View style={[style, { backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: '#666', fontSize: 14 }}>Imagen no disponible</Text>
+      </View>
+    );
+  }
+
+  return (
+    <Image
+      source={{ uri: base64String }}
+      style={style}
+      onError={() => setImageError(true)}
+      {...props}
+    />
+  );
+};
+
 export default function NewsScreen({ navigation }) {
   const [expandedCards, setExpandedCards] = useState({});
   const [isBrandModalVisible, setIsBrandModalVisible] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [news, setNews] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(true);
+  const [newsError, setNewsError] = useState(null);
 
   const brands = [
     { 
@@ -64,40 +89,52 @@ export default function NewsScreen({ navigation }) {
     },
   ];
 
-  const news = [
-    {
-      id: 1,
-      title: 'Ferrari presenta el SF90XX: 0 a 100 en 2,3 segundos',
-      date: '08-11-2021',
-      image: 'https://placehold.co/320x120',
-      shortDescription: 'El SF90XX 0 - 100 en 2.3 Segundos Y Una Nueva Aerodinámica Activa Que Lo Hace Mas Potente Y Rápido Del Mercado',
-      fullDescription: 'Ferrari ha presentado oficialmente el SF90XX, un superdeportivo híbrido que establece nuevos récords de rendimiento. Con un motor V8 biturbo de 4.0 litros combinado con tres motores eléctricos, el SF90XX genera una potencia total de 1,016 CV. Su aceleración de 0 a 100 km/h en solo 2.3 segundos lo convierte en uno de los vehículos más rápidos del mercado. La aerodinámica activa incluye un alerón trasero que se ajusta automáticamente según las condiciones de conducción, proporcionando hasta 530 kg de carga aerodinámica a 250 km/h.',
-    },
-    {
-      id: 2,
-      title: 'Corvette GT: potencia y aerodinámica redefinidas',
-      date: '09-11-2021',
-      image: 'https://placehold.co/320x120',
-      shortDescription: 'La nueva generación del Corvette GT redefine los límites del rendimiento americano con tecnología de vanguardia',
-      fullDescription: 'El Corvette GT representa la evolución más avanzada del deportivo americano por excelencia. Equipado con un motor V8 LT2 de 6.2 litros que produce 495 CV, el Corvette GT combina la tradición de potencia americana con tecnología europea de precisión. Su chasis de fibra de carbono y suspensión magnética adaptativa ofrecen un manejo excepcional tanto en pista como en carretera. El interior cuenta con materiales premium y la última tecnología de conectividad.',
-    },
-    {
-      id: 3,
-      title: 'Aston Martin y su nueva tecnología híbrida',
-      date: '10-11-2021',
-      image: 'https://placehold.co/320x120',
-      shortDescription: 'Aston Martin revoluciona el lujo deportivo con su nueva plataforma híbrida de alto rendimiento',
-      fullDescription: 'Aston Martin ha desarrollado una nueva plataforma híbrida que combina motores de combustión tradicionales con sistemas eléctricos avanzados. Esta tecnología permite mantener el carácter deportivo de la marca mientras mejora significativamente la eficiencia y reduce las emisiones. El sistema híbrido incluye recuperación de energía en frenado, propulsión eléctrica en bajas velocidades y asistencia eléctrica para mayor potencia en aceleración. Los materiales ligeros y la aerodinámica optimizada completan el paquete tecnológico.',
-    },
-    {
-      id: 4,
-      title: 'Cadillac lanza la 4x4 más potente',
-      date: '11-11-2021',
-      image: 'https://placehold.co/320x120',
-      shortDescription: 'Cadillac presenta su SUV más potente con capacidades off-road excepcionales y lujo incomparable',
-      fullDescription: 'El nuevo Cadillac SUV establece nuevos estándares en el segmento de vehículos de lujo todo terreno. Con un motor V8 supercargado que genera 668 CV y 893 Nm de par, este SUV combina potencia brutal con refinamiento excepcional. Su sistema de tracción integral inteligente y suspensión neumática adaptativa permiten conquistar cualquier terreno mientras mantienen el confort de un vehículo de lujo. El interior está equipado con los más altos estándares de calidad y tecnología avanzada.',
-    },
-  ];
+  // Función para obtener las noticias desde el API
+  const fetchNews = async () => {
+    try {
+      setNewsLoading(true);
+      setNewsError(null);
+      
+      const response = await fetch('http://localhost:3000/api/news');
+      const data = await response.json();
+
+      if (data.success && Array.isArray(data.data)) {
+        // Mapear los datos del API al formato esperado por el componente
+        const mappedNews = data.data.map((item) => {
+          // Formatear la fecha de publicación
+          const pubDate = new Date(item.publicationDate);
+          const formattedDate = `${String(pubDate.getDate()).padStart(2, '0')}-${String(pubDate.getMonth() + 1).padStart(2, '0')}-${pubDate.getFullYear()}`;
+          
+          // Crear descripción corta (primeros 150 caracteres) y completa
+          const text = item.text || '';
+          const shortDescription = text.length > 150 ? text.substring(0, 150) + '...' : text;
+          const fullDescription = text;
+
+          return {
+            id: item.id,
+            title: item.title,
+            date: formattedDate,
+            image: item.image, // base64
+            shortDescription: shortDescription,
+            fullDescription: fullDescription,
+          };
+        });
+        
+        setNews(mappedNews);
+      } else {
+        setNewsError('No se pudieron cargar las noticias');
+      }
+    } catch (error) {
+      console.error('Error al obtener noticias:', error);
+      setNewsError('Error al cargar las noticias');
+    } finally {
+      setNewsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNews();
+  }, []);
 
   return (
     <LinearGradient colors={["#0a0a0a", "#040404"]} style={styles.root}>
@@ -140,35 +177,61 @@ export default function NewsScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Noticia del día */}
-          {news.map((n) => (
-            <View key={n.id} style={styles.card}>
-              <Image source={{ uri: n.image }} style={styles.cardImage} />
-              <View style={styles.cardBody}>
-                <Text style={styles.cardTitle} numberOfLines={2}>{n.title}</Text>
-                <Text style={styles.cardMeta}>Publicado: {n.date}</Text>
-                
-                {/* Descripción corta siempre visible */}
-                <Text style={styles.cardDescription}>
-                  {expandedCards[n.id] ? n.fullDescription : n.shortDescription}
-                </Text>
-                
-                <TouchableOpacity 
-                  style={styles.readMore}
-                  onPress={() => {
-                    setExpandedCards(prev => ({
-                      ...prev,
-                      [n.id]: !prev[n.id]
-                    }));
-                  }}
-                >
-                  <Text style={styles.readMoreText}>
-                    {expandedCards[n.id] ? 'Leer menos' : 'Leer más'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+          {/* Noticias */}
+          {newsLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.accentRed} />
+              <Text style={styles.loadingText}>Cargando noticias...</Text>
             </View>
-          ))}
+          ) : newsError ? (
+            <View style={styles.errorContainer}>
+              <MaterialIcons name="error-outline" size={48} color={colors.accentRed} />
+              <Text style={styles.errorText}>{newsError}</Text>
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={fetchNews}
+              >
+                <Text style={styles.retryButtonText}>Reintentar</Text>
+              </TouchableOpacity>
+            </View>
+          ) : news.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No hay noticias disponibles</Text>
+            </View>
+          ) : (
+            news.map((n) => (
+              <View key={n.id} style={styles.card}>
+                <Base64Image 
+                  base64String={n.image}
+                  style={styles.cardImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.cardBody}>
+                  <Text style={styles.cardTitle} numberOfLines={2}>{n.title}</Text>
+                  <Text style={styles.cardMeta}>Publicado: {n.date}</Text>
+                  
+                  {/* Descripción corta siempre visible */}
+                  <Text style={styles.cardDescription}>
+                    {expandedCards[n.id] ? n.fullDescription : n.shortDescription}
+                  </Text>
+                  
+                  <TouchableOpacity 
+                    style={styles.readMore}
+                    onPress={() => {
+                      setExpandedCards(prev => ({
+                        ...prev,
+                        [n.id]: !prev[n.id]
+                      }));
+                    }}
+                  >
+                    <Text style={styles.readMoreText}>
+                      {expandedCards[n.id] ? 'Leer menos' : 'Leer más'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))
+          )}
 
 
           <Footer />
@@ -477,6 +540,50 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    marginTop: 12,
+  },
+  errorContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorText: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  retryButton: {
+    padding: 12,
+    backgroundColor: colors.accentRed,
+    borderRadius: 8,
+    minWidth: 120,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    color: colors.textMuted,
+    fontSize: 16,
+    textAlign: 'center',
   },
 });
 

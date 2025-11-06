@@ -46,6 +46,8 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [models, setModels] = useState([]);
   const [modelsLoading, setModelsLoading] = useState(true);
+  const [brands, setBrands] = useState([]);
+  const [brandsLoading, setBrandsLoading] = useState(true);
 
   // Función para obtener el vehículo mensual
   const fetchMonthlyCar = async () => {
@@ -88,9 +90,31 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  // Función para obtener las marcas
+  const fetchBrands = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/brands');
+      const data = await response.json();
+
+      if (data.success && Array.isArray(data.data)) {
+        const mapped = data.data.map((brand) => ({
+          id: brand.id,
+          name: brand.name,
+          logo: brand.logo,
+        }));
+        setBrands(mapped);
+      }
+    } catch (error) {
+      console.error('Error al obtener marcas:', error);
+    } finally {
+      setBrandsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchMonthlyCar();
     fetchHomeModels();
+    fetchBrands();
   }, []);
 
   return (
@@ -162,10 +186,23 @@ export default function HomeScreen({ navigation }) {
 
             <View style={styles.spacingBetweenCarousels} />
             <Text style={styles.rightTitle}>MARCAS Y SUS HISTORIAS</Text>
-            <BrandsCarousel 
-              data={[1,2,3,4,5,6]} 
-              onBrandPress={(brandName) => navigation.navigate('BrandHistory', { brandName })}
-            />
+            {brandsLoading ? (
+              <View style={styles.brandsLoadingContainer}>
+                <Text style={styles.loadingText}>Cargando marcas...</Text>
+              </View>
+            ) : (
+              <BrandsCarousel 
+                data={brands.length > 0 ? brands : []} 
+                onBrandPress={(brand) => {
+                  // brand puede ser un objeto con id y name, o solo el name
+                  if (typeof brand === 'object' && brand.id) {
+                    navigation.navigate('BrandHistory', { brandId: brand.id, brandName: brand.name });
+                  } else {
+                    navigation.navigate('BrandHistory', { brandName: brand });
+                  }
+                }}
+              />
+            )}
 
             <View style={styles.spacingBelowBrands} />
 
@@ -288,6 +325,10 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
+  },
+  brandsLoadingContainer: {
+    padding: 20,
+    alignItems: 'center',
   },
 });
 

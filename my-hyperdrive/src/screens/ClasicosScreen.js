@@ -43,6 +43,7 @@ export default function ClasicosScreen({ navigation }) {
           specifications: car.specifications && car.specifications.length > 0 
             ? car.specifications 
             : [],
+          textos: car.textos && Array.isArray(car.textos) ? car.textos : [],
           carouselImages: car.imageBase64 
             ? [
                 { uri: car.imageBase64 },
@@ -79,7 +80,7 @@ export default function ClasicosScreen({ navigation }) {
   const renderCarCard = (car) => (
     <View key={car.id} style={styles.carCard}>
       <View style={styles.carHeader}>
-        <Text style={styles.maxSpeed}>Vmax: {car.maxSpeed}</Text>
+        <Text style={styles.maxSpeed}>Vmax {car.maxSpeed}</Text>
       </View>
       
       <View style={styles.carImageContainer}>
@@ -87,43 +88,46 @@ export default function ClasicosScreen({ navigation }) {
       </View>
       
       <View style={styles.carInfo}>
-        <Text style={styles.carName}>{car.name}</Text>
-        <Text style={styles.carPrice}>{car.price}</Text>
+        {/* Ocultar información básica cuando está expandido */}
+        {expandedCar !== car.id && (
+          <>
+            <Text style={styles.carName}>{car.name}</Text>
+            <Text style={styles.carPrice}>{car.price}</Text>
+            
+            {/* Mostrar textos siempre, justo después del precio */}
+            {car.textos && car.textos.length > 0 && (
+              <View style={styles.textosContainer}>
+                {car.textos.map((texto, index) => (
+                  <View key={index} style={styles.textoItem}>
+                    <View style={styles.textoArrowContainer}>
+                      <Text style={styles.textoArrow}>→</Text>
+                    </View>
+                    <Text style={styles.textoText}>{texto}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        )}
       </View>
 
-      {expandedCar === car.id && car.specifications && (
+      {/* Contenido expandible: especificaciones */}
+      {expandedCar === car.id && (
         <View style={styles.specificationsContainer}>
-          {car.specifications.map((spec, index) => (
-            <View key={index} style={styles.specificationItem}>
-              <View style={styles.specIcon}>
-                <Text style={styles.specIconText}>{spec.icon}</Text>
-              </View>
-              <View style={styles.specContent}>
-                <Text style={styles.specTitle}>{spec.title}</Text>
-                <Text style={styles.specDescription}>{spec.description}</Text>
-              </View>
-            </View>
-          ))}
-          
-          {car.carouselImages && (
-            <View style={styles.carouselContainer}>
-              <TouchableOpacity style={styles.carouselArrow}>
-                <MaterialIcons name="keyboard-double-arrow-left" size={24} color="#FFFFFF" />
-              </TouchableOpacity>
-              
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                style={styles.carousel}
-              >
-                {car.carouselImages.map((image, index) => (
-                  <Image key={index} source={image} style={styles.carouselImage} />
-                ))}
-              </ScrollView>
-              
-              <TouchableOpacity style={styles.carouselArrow}>
-                <MaterialIcons name="keyboard-double-arrow-right" size={24} color="#FFFFFF" />
-              </TouchableOpacity>
+          {/* Mostrar especificaciones si existen */}
+          {car.specifications && car.specifications.length > 0 && (
+            <View style={styles.specificationsList}>
+              {car.specifications.map((spec, index) => (
+                <View key={index} style={styles.specificationItem}>
+                  <View style={styles.specIcon}>
+                    <Text style={styles.specIconText}>{spec.icon}</Text>
+                  </View>
+                  <View style={styles.specContent}>
+                    <Text style={styles.specTitle}>{spec.title}</Text>
+                    <Text style={styles.specDescription}>{spec.description}</Text>
+                  </View>
+                </View>
+              ))}
             </View>
           )}
         </View>
@@ -132,10 +136,14 @@ export default function ClasicosScreen({ navigation }) {
       <TouchableOpacity 
         style={styles.expandButton}
         onPress={() => toggleExpanded(car.id)}
+        activeOpacity={0.7}
       >
+        <Text style={styles.expandButtonText}>
+          {expandedCar === car.id ? 'Ver menos' : 'Ver más'}
+        </Text>
         <MaterialIcons 
           name={expandedCar === car.id ? "keyboard-double-arrow-up" : "keyboard-double-arrow-down"} 
-          size={24} 
+          size={20} 
           color="#FFFFFF" 
         />
       </TouchableOpacity>
@@ -316,103 +324,156 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   carCard: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 15,
-    marginBottom: 20,
+    backgroundColor: '#1f1f1f',
+    borderRadius: 20,
+    marginBottom: 24,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#444',
+    borderColor: '#333',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   carHeader: {
-    padding: 16,
-    backgroundColor: '#1a1a1a',
+    padding: 18,
+    backgroundColor: '#151515',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2a2a',
   },
   maxSpeed: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
   carImageContainer: {
-    height: 200,
-    backgroundColor: '#333',
+    height: 220,
+    backgroundColor: '#0a0a0a',
+    overflow: 'hidden',
   },
   carImage: {
     width: '100%',
     height: '100%',
   },
   carInfo: {
-    padding: 20,
-    backgroundColor: '#2a2a2a',
+    padding: 24,
+    backgroundColor: '#1f1f1f',
   },
   carName: {
     color: '#FFFFFF',
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 10,
+    letterSpacing: 0.3,
   },
   carPrice: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '600',
+    marginBottom: 20,
+    opacity: 0.95,
   },
   specificationsContainer: {
-    padding: 20,
-    backgroundColor: '#1a1a1a',
+    padding: 24,
+    backgroundColor: '#151515',
+    borderTopWidth: 1,
+    borderTopColor: '#2a2a2a',
+  },
+  textosContainer: {
+    marginTop: 4,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  textoItem: {
+    flexDirection: 'row',
+    marginBottom: 14,
+    alignItems: 'flex-start',
+    paddingVertical: 2,
+  },
+  textoArrowContainer: {
+    width: 24,
+    alignItems: 'center',
+    marginRight: 12,
+    marginTop: 2,
+  },
+  textoArrow: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '300',
+  },
+  textoText: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '400',
+    letterSpacing: 0.2,
+  },
+  specificationsList: {
+    marginBottom: 24,
   },
   specificationItem: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: 18,
     alignItems: 'flex-start',
+    paddingBottom: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
   specIcon: {
-    width: 30,
-    height: 30,
+    width: 36,
+    height: 36,
     backgroundColor: '#8B0000',
-    borderRadius: 15,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 14,
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 4,
   },
   specIconText: {
-    fontSize: 16,
+    fontSize: 18,
+    color: '#FFFFFF',
   },
   specContent: {
     flex: 1,
+    paddingTop: 2,
   },
   specTitle: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: 0.2,
   },
   specDescription: {
     color: '#CCCCCC',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  carouselContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  carouselArrow: {
-    padding: 8,
-  },
-  carousel: {
-    flex: 1,
-    marginHorizontal: 8,
-  },
-  carouselImage: {
-    width: 80,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 8,
+    fontSize: 15,
+    lineHeight: 22,
+    letterSpacing: 0.1,
   },
   expandButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#1a1a1a',
+    justifyContent: 'center',
+    padding: 18,
+    backgroundColor: '#151515',
+    borderTopWidth: 1,
+    borderTopColor: '#2a2a2a',
+    gap: 8,
+  },
+  expandButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 4,
   },
   loadingContainer: {
     flex: 1,

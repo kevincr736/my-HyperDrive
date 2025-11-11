@@ -187,13 +187,50 @@ router.post('/update/monthly_car', async (req, res) => {
 // Acepta imageBase64 (data URI) o imageUrl (se convertirá a base64)
 router.post('/create/featured', async (req, res) => {
   try {
-    const { name, price, maxSpeed, category, imageBase64, imageUrl, description } = req.body || {};
+    const { name, price, maxSpeed, category, imageBase64, imageUrl, description, timeline, specifications, textos } = req.body || {};
 
     if (!name || !price || !maxSpeed || !category || (!imageBase64 && !imageUrl)) {
       return res.status(400).json({
         success: false,
         message: 'Faltan parámetros requeridos: name, price, maxSpeed, category y (imageBase64 o imageUrl)'
       });
+    }
+
+    // Validar timeline si se proporciona
+    if (timeline) {
+      if (!Array.isArray(timeline)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Timeline debe ser un array'
+        });
+      }
+      for (const event of timeline) {
+        if (!event.year || !event.title || !event.description) {
+          return res.status(400).json({
+            success: false,
+            message: 'Cada evento del timeline debe tener: year, title y description'
+          });
+        }
+      }
+    }
+
+    // Validar textos si se proporciona
+    if (textos !== undefined) {
+      if (!Array.isArray(textos)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Textos debe ser un array'
+        });
+      }
+      // Validar que todos los elementos sean strings
+      for (const texto of textos) {
+        if (typeof texto !== 'string') {
+          return res.status(400).json({
+            success: false,
+            message: 'Todos los elementos de textos deben ser strings'
+          });
+        }
+      }
     }
 
     // Validar categoría
@@ -226,9 +263,11 @@ router.post('/create/featured', async (req, res) => {
       category: finalCategory,
       image: finalBase64, // almacenamos base64 en el mismo campo string
       description: description || '',
+      timeline: timeline || [],
+      specifications: specifications || [],
+      textos: textos || [],
       isFeatured: true,
-      isActive: true,
-      specifications: []
+      isActive: true
     });
 
     await car.save();
@@ -241,7 +280,8 @@ router.post('/create/featured', async (req, res) => {
         title: car.name,
         price: car.price,
         imageBase64: car.image,
-        category: car.category
+        category: car.category,
+        textos: car.textos || []
       }
     });
   } catch (error) {
@@ -352,6 +392,7 @@ router.get('/', async (req, res) => {
           imageBase64,
           isFeatured: car.isFeatured,
           specifications: car.specifications,
+          textos: car.textos || [],
           createdAt: car.createdAt,
           updatedAt: car.updatedAt
         };
@@ -368,6 +409,7 @@ router.get('/', async (req, res) => {
           imageBase64: placeholderBase64,
           isFeatured: car.isFeatured,
           specifications: car.specifications,
+          textos: car.textos || [],
           createdAt: car.createdAt,
           updatedAt: car.updatedAt
         };

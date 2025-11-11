@@ -45,7 +45,31 @@ const carSchema = new mongoose.Schema({
       required: true
     }
   }],
+  timeline: [{
+    year: {
+      type: Number,
+      required: true,
+      min: [1800, 'El año debe ser válido'],
+      max: [new Date().getFullYear() + 10, 'El año no puede ser muy futuro']
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [200, 'El título no puede exceder 200 caracteres']
+    },
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [500, 'La descripción del evento no puede exceder 500 caracteres']
+    }
+  }],
   carouselImages: [String],
+  textos: [{
+    type: String,
+    trim: true
+  }],
   isFeatured: {
     type: Boolean,
     default: false

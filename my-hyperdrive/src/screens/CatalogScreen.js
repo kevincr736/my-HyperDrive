@@ -14,28 +14,28 @@ export default function CatalogScreen({ navigation }) {
     {
       id: 1,
       title: 'DEPORTIVOS',
-      video: null, // Por ahora sin video, se puede agregar después
+      video: require('../../assets/test.mp4'), // Video de prueba
       position: 'bottom-right',
       screen: 'Deportivos'
     },
     {
       id: 2,
       title: 'CLASICOS',
-      video: require('../../assets/clasicc.mp4'), // Video de prueba
+      video: require('../../assets/clasico.mp4'), // Video de prueba
       position: 'top-left',
       screen: 'Clasicos'
     },
     {
       id: 3,
       title: 'LUJOSOS',
-      video: null, // Por ahora sin video, se puede agregar después
+      video: require('../../assets/lujosos.mp4'), // Video de prueba
       position: 'top-right',
       screen: 'Lujosos'
     },
     {
       id: 4,
       title: 'TODO TERRENO',
-      video: null, // Por ahora sin video, se puede agregar después
+      video: require('../../assets/terreno.mp4'), // Video de prueba
       position: 'top-left',
       screen: 'Suv'
     }
@@ -105,24 +105,26 @@ export default function CatalogScreen({ navigation }) {
           {categories.map((category) => (
             <View key={category.id} style={styles.categoryCard}>
               {category.video ? (
-                <Video
-                  ref={(ref) => {
-                    videoRefs.current[category.id] = ref;
-                  }}
-                  source={category.video}
-                  style={styles.categoryVideo}
-                  resizeMode={ResizeMode.CONTAIN}
-                  shouldPlay
-                  isLooping
-                  isMuted
-                  useNativeControls={false}
-                  onLoad={() => {
-                    // Asegurar que el video se reproduzca cuando esté listo
-                    if (videoRefs.current[category.id]) {
-                      videoRefs.current[category.id].playAsync().catch(() => {});
-                    }
-                  }}
-                />
+                <View style={styles.videoWrapper}>
+                  <Video
+                    ref={(ref) => {
+                      videoRefs.current[category.id] = ref;
+                    }}
+                    source={category.video}
+                    style={styles.categoryVideo}
+                    resizeMode={ResizeMode.CONTAIN}
+                    shouldPlay
+                    isLooping
+                    isMuted
+                    useNativeControls={false}
+                    onLoad={() => {
+                      // Asegurar que el video se reproduzca cuando esté listo
+                      if (videoRefs.current[category.id]) {
+                        videoRefs.current[category.id].playAsync().catch(() => {});
+                      }
+                    }}
+                  />
+                </View>
               ) : (
                 <View style={styles.categoryPlaceholder}>
                   <MaterialIcons name="videocam-off" size={48} color="#666" />
@@ -250,10 +252,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
-  categoryVideo: {
+  videoWrapper: {
     width: '100%',
     height: 200,
     borderRadius: 12,
+    overflow: 'hidden',
+  },
+  categoryVideo: {
+    width: '100%',
+    height: '100%',
   },
   categoryPlaceholder: {
     width: '100%',

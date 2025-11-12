@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
-export default function IconTile({ label }) {
+export default function IconTile({ label, onPress }) {
   const getIcon = () => {
     if (label === 'CATALOGOS') {
       return <MaterialIcons name="directions-car" size={35} color="#FFFFFF" />;
@@ -14,12 +14,16 @@ export default function IconTile({ label }) {
   };
 
   return (
-    <View style={styles.wrapper}>
+    <TouchableOpacity 
+      style={styles.wrapper}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
       <View style={styles.icon}>
         {getIcon()}
       </View>
       <Text style={styles.text}>{label}</Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 

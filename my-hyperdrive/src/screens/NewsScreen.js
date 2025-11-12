@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Modal, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Modal, Dimensions, ActivityIndicator, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
+import { Video, ResizeMode } from 'expo-av';
 import Footer from '../components/Footer';
 import SideMenu from '../components/SideMenu';
 import { colors } from '../theme/colors';
@@ -29,6 +30,44 @@ const Base64Image = ({ base64String, style, ...props }) => {
   );
 };
 
+// Componente para extraer thumbnail del video
+const VideoThumbnail = ({ videoUrl, style }) => {
+  const [loading, setLoading] = useState(true);
+  const thumbnailVideoRef = React.useRef(null);
+
+  if (!videoUrl) {
+    return (
+      <View style={[style, { backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' }]}>
+        <MaterialIcons name="videocam" size={20} color="#666" />
+      </View>
+    );
+  }
+
+  // Usar Video como thumbnail - muestra el primer frame sin reproducir
+  return (
+    <View style={style} overflow="hidden">
+      <Video
+        ref={thumbnailVideoRef}
+        source={{ uri: videoUrl }}
+        style={style}
+        resizeMode={ResizeMode.COVER}
+        shouldPlay={false}
+        isMuted
+        isLooping={false}
+        useNativeControls={false}
+        onLoad={() => {
+          setLoading(false);
+        }}
+      />
+      {loading && (
+        <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a1a' }]}>
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        </View>
+      )}
+    </View>
+  );
+};
+
 export default function NewsScreen({ navigation }) {
   const [expandedCards, setExpandedCards] = useState({});
   const [isBrandModalVisible, setIsBrandModalVisible] = useState(false);
@@ -38,6 +77,80 @@ export default function NewsScreen({ navigation }) {
   const [news, setNews] = useState([]);
   const [newsLoading, setNewsLoading] = useState(true);
   const [newsError, setNewsError] = useState(null);
+  const [states, setStates] = useState([]);
+  const [statesLoading, setStatesLoading] = useState(true);
+  const [isStateModalVisible, setIsStateModalVisible] = useState(false);
+  const [newState, setNewState] = useState({ videoUrl: '', text: '', description: '' });
+  const [creatingState, setCreatingState] = useState(false);
+  const [videoMode, setVideoMode] = useState('contain'); // 'contain' o 'cover'
+  const videoRefs = React.useRef({});
+
+  // Función para obtener los estados desde el API
+  const fetchStates = async () => {
+    try {
+      setStatesLoading(true);
+      const response = await fetch('http://localhost:3000/api/states');
+      const data = await response.json();
+
+      if (data.success && Array.isArray(data.data)) {
+        // Mapear los estados del API al formato esperado por el componente
+        const mappedStates = data.data.map((state) => ({
+          id: state.id,
+          name: state.text, // Usar el texto como nombre
+          icon: state.videoUrl, // Usar la URL del video para extraer thumbnail
+          videoUrl: state.videoUrl, // Guardar URL del video
+          stories: [
+            {
+              type: 'video',
+              url: state.videoUrl,
+              title: state.description
+            }
+          ]
+        }));
+        setStates(mappedStates);
+      }
+    } catch (error) {
+      console.error('Error al obtener estados:', error);
+    } finally {
+      setStatesLoading(false);
+    }
+  };
+
+  // Función para crear un estado
+  const createState = async () => {
+    try {
+      if (!newState.videoUrl || !newState.text || !newState.description) {
+        alert('Por favor completa todos los campos');
+        return;
+      }
+
+      setCreatingState(true);
+      const response = await fetch('http://localhost:3000/api/states/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newState),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Limpiar el formulario
+        setNewState({ videoUrl: '', text: '', description: '' });
+        setIsStateModalVisible(false);
+        // Recargar estados
+        fetchStates();
+      } else {
+        alert(data.message || 'Error al crear el estado');
+      }
+    } catch (error) {
+      console.error('Error al crear estado:', error);
+      alert('Error al crear el estado');
+    } finally {
+      setCreatingState(false);
+    }
+  };
 
   const brands = [
     { 
@@ -134,6 +247,18 @@ export default function NewsScreen({ navigation }) {
 
   useEffect(() => {
     fetchNews();
+    fetchStates();
+  }, []);
+
+  useEffect(() => {
+    // Limpiar videos al desmontar
+    return () => {
+      Object.values(videoRefs.current).forEach((ref) => {
+        if (ref) {
+          ref.unloadAsync().catch(() => {});
+        }
+      });
+    };
   }, []);
 
   return (
@@ -155,19 +280,39 @@ export default function NewsScreen({ navigation }) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.brandsRow}
           >
-            {brands.map((b) => (
-              <TouchableOpacity 
-                key={b.id} 
-                style={styles.brandItem}
-                onPress={() => {
-                  setSelectedBrand(b);
-                  setIsBrandModalVisible(true);
-                }}
-              >
-                <Image source={{ uri: b.icon }} style={styles.brandIcon} />
-                <Text style={styles.brandLabel} numberOfLines={1}>{b.name}</Text>
-              </TouchableOpacity>
-            ))}
+            {statesLoading ? (
+              <View style={styles.statesLoadingContainer}>
+                <ActivityIndicator size="small" color={colors.accentRed} />
+                <Text style={styles.loadingText}>Cargando historias...</Text>
+              </View>
+            ) : states.length > 0 ? (
+              states.map((b) => (
+                <TouchableOpacity 
+                  key={b.id} 
+                  style={styles.brandItem}
+                  onPress={() => {
+                    setSelectedBrand(b);
+                    setCurrentStoryIndex(0);
+                    setIsBrandModalVisible(true);
+                  }}
+                >
+                  {b.videoUrl ? (
+                    <VideoThumbnail videoUrl={b.videoUrl} style={styles.brandIcon} />
+                  ) : (
+                    <Image source={{ uri: b.icon }} style={styles.brandIcon} />
+                  )}
+                  <Text style={styles.brandLabel} numberOfLines={1}>{b.name}</Text>
+                </TouchableOpacity>
+              ))
+            ) : null}
+            {/* Botón para agregar nuevo estado */}
+            <TouchableOpacity 
+              style={styles.addStateButton}
+              onPress={() => setIsStateModalVisible(true)}
+            >
+              <MaterialIcons name="add-circle" size={44} color="#FFFFFF" />
+              <Text style={styles.brandLabel} numberOfLines={1}>Agregar</Text>
+            </TouchableOpacity>
           </ScrollView>
 
           <View style={styles.sectionHeader}>
@@ -251,11 +396,33 @@ export default function NewsScreen({ navigation }) {
         <View style={styles.storiesOverlay}>
           {/* Story Content */}
           <View style={styles.storyContainer}>
-            <Image 
-              source={{ uri: selectedBrand?.stories?.[currentStoryIndex]?.url }} 
-              style={styles.storyImage}
-              resizeMode="cover"
-            />
+            {selectedBrand?.stories?.[currentStoryIndex]?.type === 'video' ? (
+              <View style={styles.videoWrapper}>
+                <Video
+                  ref={(ref) => {
+                    videoRefs.current[selectedBrand?.id] = ref;
+                  }}
+                  source={{ uri: selectedBrand?.stories?.[currentStoryIndex]?.url }}
+                  style={styles.storyVideo}
+                  resizeMode={videoMode === 'contain' ? ResizeMode.CONTAIN : ResizeMode.COVER}
+                  shouldPlay
+                  isLooping
+                  isMuted
+                  useNativeControls={false}
+                  onLoad={() => {
+                    if (videoRefs.current[selectedBrand?.id]) {
+                      videoRefs.current[selectedBrand?.id].playAsync().catch(() => {});
+                    }
+                  }}
+                />
+              </View>
+            ) : (
+              <Image 
+                source={{ uri: selectedBrand?.stories?.[currentStoryIndex]?.url }} 
+                style={styles.storyImage}
+                resizeMode="cover"
+              />
+            )}
             
             {/* Story Header */}
             <View style={styles.storyHeader}>
@@ -263,15 +430,30 @@ export default function NewsScreen({ navigation }) {
                 <Image source={{ uri: selectedBrand?.icon }} style={styles.storyBrandIcon} />
                 <Text style={styles.storyBrandName}>{selectedBrand?.name}</Text>
               </View>
-              <TouchableOpacity 
-                style={styles.storyCloseButton}
-                onPress={() => {
-                  setIsBrandModalVisible(false);
-                  setCurrentStoryIndex(0);
-                }}
-              >
-                <MaterialIcons name="close" size={24} color="#FFFFFF" />
-              </TouchableOpacity>
+              <View style={styles.storyHeaderButtons}>
+                {/* Botón para cambiar modo de video */}
+                {selectedBrand?.stories?.[currentStoryIndex]?.type === 'video' && (
+                  <TouchableOpacity 
+                    style={styles.storyModeButton}
+                    onPress={() => setVideoMode(videoMode === 'contain' ? 'cover' : 'contain')}
+                  >
+                    <MaterialIcons 
+                      name={videoMode === 'contain' ? 'fit-screen' : 'crop-free'} 
+                      size={24} 
+                      color="#FFFFFF" 
+                    />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity 
+                  style={styles.storyCloseButton}
+                  onPress={() => {
+                    setIsBrandModalVisible(false);
+                    setCurrentStoryIndex(0);
+                  }}
+                >
+                  <MaterialIcons name="close" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Story Title */}
@@ -357,6 +539,71 @@ export default function NewsScreen({ navigation }) {
         onClose={() => setIsMenuVisible(false)}
         onNavigate={(screen) => navigation.navigate(screen)}
       />
+
+      {/* Modal para crear estado */}
+      <Modal
+        visible={isStateModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsStateModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Crear Historia</Text>
+              <TouchableOpacity 
+                onPress={() => setIsStateModalVisible(false)}
+                style={styles.modalCloseButton}
+              >
+                <MaterialIcons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <Text style={styles.modalLabel}>URL del Video</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="http://localhost:3000/videos/estado.mp4"
+                placeholderTextColor="#666"
+                value={newState.videoUrl}
+                onChangeText={(videoUrl) => setNewState({ ...newState, videoUrl })}
+              />
+
+              <Text style={styles.modalLabel}>Texto (Título)</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Lamborghini Revuelto"
+                placeholderTextColor="#666"
+                value={newState.text}
+                onChangeText={(text) => setNewState({ ...newState, text })}
+              />
+
+              <Text style={styles.modalLabel}>Descripción</Text>
+              <TextInput
+                style={[styles.modalInput, { minHeight: 80 }]}
+                placeholder="Nuevo Revuelto 2024"
+                placeholderTextColor="#666"
+                value={newState.description}
+                onChangeText={(description) => setNewState({ ...newState, description })}
+                multiline
+                numberOfLines={3}
+              />
+
+              <TouchableOpacity 
+                style={[styles.modalSubmitButton, creatingState && styles.modalSubmitButtonDisabled]}
+                onPress={createState}
+                disabled={creatingState}
+              >
+                {creatingState ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalSubmitButtonText}>Crear Historia</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -378,6 +625,17 @@ const styles = StyleSheet.create({
   brandItem: { alignItems: 'center', marginRight: 16 },
   brandIcon: { width: 44, height: 44, borderRadius: 26, borderWidth: 1, borderColor: '#FFFFFF' },
   brandLabel: { color: '#FFFFFF', fontSize: 10, marginTop: 6, width: 72, textAlign: 'center' },
+  addStateButton: { 
+    alignItems: 'center', 
+    marginRight: 16,
+    justifyContent: 'center',
+  },
+  statesLoadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
 
   sectionHeader: {
     flexDirection: 'row',
@@ -441,6 +699,86 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  videoWrapper: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+  },
+  storyVideo: {
+    width: '100%',
+    height: '100%',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: colors.backgroundDark,
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  modalTitle: {
+    color: colors.textPrimary,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  modalCloseButton: {
+    padding: 8,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalLabel: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  modalInput: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    padding: 12,
+    color: colors.textPrimary,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    minHeight: 44,
+  },
+  modalSubmitButton: {
+    backgroundColor: colors.accentRed,
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  modalSubmitButtonDisabled: {
+    opacity: 0.6,
+  },
+  modalSubmitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
   storyHeader: {
     position: 'absolute',
     top: 50,
@@ -466,6 +804,16 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  storyHeaderButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  storyModeButton: {
+    padding: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
   },
   storyCloseButton: {
     padding: 8,

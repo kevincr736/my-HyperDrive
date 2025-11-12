@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Pressable, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -48,6 +48,11 @@ export default function HomeScreen({ navigation }) {
   const [modelsLoading, setModelsLoading] = useState(true);
   const [brands, setBrands] = useState([]);
   const [brandsLoading, setBrandsLoading] = useState(true);
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(true);
+  const [isCommentModalVisible, setIsCommentModalVisible] = useState(false);
+  const [newComment, setNewComment] = useState({ text: '', category: 'Category', avatarUrl: '' });
+  const [creatingComment, setCreatingComment] = useState(false);
 
   // Función para obtener el vehículo mensual
   const fetchMonthlyCar = async () => {
@@ -111,10 +116,81 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  // Función para obtener los comentarios
+  const fetchComments = async () => {
+    try {
+      setCommentsLoading(true);
+      const response = await fetch('http://localhost:3000/api/comments');
+      const data = await response.json();
+
+      if (data.success && Array.isArray(data.data)) {
+        const mapped = data.data.map((comment) => {
+          // Formatear la fecha
+          const commentDate = new Date(comment.date);
+          const formattedDate = `${String(commentDate.getDate()).padStart(2, '0')}-${String(commentDate.getMonth() + 1).padStart(2, '0')}-${commentDate.getFullYear()}`;
+          
+          return {
+            id: comment.id,
+            date: formattedDate,
+            category: comment.category,
+            title: comment.text,
+            avatarUri: comment.avatar, // base64
+          };
+        });
+        setComments(mapped);
+      }
+    } catch (error) {
+      console.error('Error al obtener comentarios:', error);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  // Función para crear un comentario
+  const createComment = async () => {
+    try {
+      if (!newComment.text || !newComment.category) {
+        alert('Por favor completa todos los campos');
+        return;
+      }
+
+      setCreatingComment(true);
+      const response = await fetch('http://localhost:3000/api/comments/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: newComment.text,
+          category: newComment.category,
+          avatarUrl: newComment.avatarUrl || 'http://localhost:3000/images/logo_lamb.png',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Limpiar el formulario
+        setNewComment({ text: '', category: 'Category', avatarUrl: '' });
+        setIsCommentModalVisible(false);
+        // Recargar comentarios
+        fetchComments();
+      } else {
+        alert(data.message || 'Error al crear el comentario');
+      }
+    } catch (error) {
+      console.error('Error al crear comentario:', error);
+      alert('Error al crear el comentario');
+    } finally {
+      setCreatingComment(false);
+    }
+  };
+
   useEffect(() => {
     fetchMonthlyCar();
     fetchHomeModels();
     fetchBrands();
+    fetchComments();
   }, []);
 
   return (
@@ -209,12 +285,31 @@ export default function HomeScreen({ navigation }) {
            
 
             <View style={styles.commentsSection}>
-              <NewsItem date="08-11-2021" title="Partiality on or continuing in particular principles" avatarUri="https://placehold.co/62x67" />
-              <NewsItem date="08-11-2021" title="Do believing oh disposing to supported allowance we." avatarUri="https://placehold.co/62x67" />
-              <NewsItem date="08-11-2021" title="Village did removed enjoyed explain nor ham saw." avatarUri="https://placehold.co/62x67" />
-              <NewsItem date="08-11-2021" title="Securing as informed declared or margaret" avatarUri="https://placehold.co/62x67" />
+              {commentsLoading ? (
+                <View style={styles.commentsLoadingContainer}>
+                  <ActivityIndicator size="small" color={colors.accentRed} />
+                  <Text style={styles.loadingText}>Cargando comentarios...</Text>
+                </View>
+              ) : comments.length > 0 ? (
+                comments.map((comment) => (
+                  <NewsItem 
+                    key={comment.id}
+                    date={comment.date}
+                    category={comment.category}
+                    title={comment.title}
+                    avatarUri={comment.avatarUri}
+                  />
+                ))
+              ) : (
+                <View style={styles.emptyCommentsContainer}>
+                  <Text style={styles.emptyCommentsText}>No hay comentarios aún</Text>
+                </View>
+              )}
 
-              <Pressable style={({pressed}) => [styles.fab, pressed && styles.fabPressed]}>
+              <Pressable 
+                style={({pressed}) => [styles.fab, pressed && styles.fabPressed]}
+                onPress={() => setIsCommentModalVisible(true)}
+              >
                 <View style={styles.fabPlus}>
                   <View style={styles.fabLineH} />
                   <View style={styles.fabLineV} />
@@ -233,6 +328,71 @@ export default function HomeScreen({ navigation }) {
         onClose={() => setIsMenuVisible(false)}
         onNavigate={(screen) => navigation.navigate(screen)}
       />
+
+      {/* Modal para crear comentario */}
+      <Modal
+        visible={isCommentModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsCommentModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Crear Comentario</Text>
+              <TouchableOpacity 
+                onPress={() => setIsCommentModalVisible(false)}
+                style={styles.modalCloseButton}
+              >
+                <MaterialIcons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <Text style={styles.modalLabel}>Texto del comentario</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Escribe tu comentario..."
+                placeholderTextColor="#666"
+                value={newComment.text}
+                onChangeText={(text) => setNewComment({ ...newComment, text })}
+                multiline
+                numberOfLines={4}
+              />
+
+              <Text style={styles.modalLabel}>Categoría</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Category"
+                placeholderTextColor="#666"
+                value={newComment.category}
+                onChangeText={(category) => setNewComment({ ...newComment, category })}
+              />
+
+              <Text style={styles.modalLabel}>URL del Avatar (opcional)</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="http://localhost:3000/images/logo_lamb.png"
+                placeholderTextColor="#666"
+                value={newComment.avatarUrl}
+                onChangeText={(avatarUrl) => setNewComment({ ...newComment, avatarUrl })}
+              />
+
+              <TouchableOpacity 
+                style={[styles.modalSubmitButton, creatingComment && styles.modalSubmitButtonDisabled]}
+                onPress={createComment}
+                disabled={creatingComment}
+              >
+                {creatingComment ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalSubmitButtonText}>Crear Comentario</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -329,6 +489,88 @@ const styles = StyleSheet.create({
   brandsLoadingContainer: {
     padding: 20,
     alignItems: 'center',
+  },
+  commentsLoadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  emptyCommentsContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyCommentsText: {
+    color: colors.textMuted,
+    fontSize: 14,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: colors.backgroundDark,
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  modalTitle: {
+    color: colors.textPrimary,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  modalCloseButton: {
+    padding: 8,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalLabel: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  modalInput: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    padding: 12,
+    color: colors.textPrimary,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    minHeight: 44,
+  },
+  modalSubmitButton: {
+    backgroundColor: colors.accentRed,
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  modalSubmitButtonDisabled: {
+    opacity: 0.6,
+  },
+  modalSubmitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
 

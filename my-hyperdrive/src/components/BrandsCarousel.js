@@ -31,7 +31,7 @@ function BrandCard({ brand, onPress }) {
   return (
     <TouchableOpacity style={styles.brandCard} onPress={onPress}>
       <View style={styles.brandHeader}>
-        {/* Barra superior oscura */}
+        <Text style={styles.brandHeaderText}>{brand.name || 'Marca'}</Text>
       </View>
       <View style={styles.brandContent}>
         {brand.logo && (
@@ -41,7 +41,6 @@ function BrandCard({ brand, onPress }) {
             resizeMode="contain"
           />
         )}
-        <Text style={styles.brandText}>{brand.name || 'Marca'}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -67,11 +66,27 @@ export default function BrandsCarousel({ data, onBrandPress }) {
     </View>
   );
   
+  // Función para generar keys únicos
+  const getKey = (item, index) => {
+    if (item && item.id) {
+      return String(item.id);
+    }
+    if (item && item.name) {
+      return `brand-${item.name}-${index}`;
+    }
+    return `brand-${index}`;
+  };
+  
+  // Si no hay brands, no renderizar nada
+  if (brands.length === 0) {
+    return null;
+  }
+  
   return (
     <FlatList
       data={brands}
       renderItem={renderItem}
-      keyExtractor={(item, index) => item.id || index.toString()}
+      keyExtractor={getKey}
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={[
@@ -89,6 +104,10 @@ export default function BrandsCarousel({ data, onBrandPress }) {
       })}
       decelerationRate={0}
       snapToAlignment="center"
+      removeClippedSubviews={false}
+      initialNumToRender={10}
+      maxToRenderPerBatch={10}
+      windowSize={10}
     />
   );
 }
@@ -116,6 +135,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.5)',
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  brandHeaderText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   brandContent: {
     flex: 1,

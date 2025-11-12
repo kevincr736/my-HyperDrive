@@ -18,7 +18,7 @@ import Footer from '../components/Footer';
 const { width } = Dimensions.get('window');
 
 export default function SuvScreen({ navigation }) {
-  const [expandedCar, setExpandedCar] = useState(null);
+  const [expandedCars, setExpandedCars] = useState({}); // Objeto para rastrear múltiples carros expandidos
   const [suvData, setSuvData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -74,7 +74,10 @@ export default function SuvScreen({ navigation }) {
   }, []);
 
   const toggleExpanded = (carId) => {
-    setExpandedCar(expandedCar === carId ? null : carId);
+    setExpandedCars(prev => ({
+      ...prev,
+      [carId]: !prev[carId] // Toggle individual para cada carro
+    }));
   };
 
   const renderCarCard = (car) => (
@@ -89,7 +92,7 @@ export default function SuvScreen({ navigation }) {
       
       <View style={styles.carInfo}>
         {/* Ocultar información básica cuando está expandido */}
-        {expandedCar !== car.id && (
+        {!expandedCars[car.id] && (
           <>
             <Text style={styles.carName}>{car.name}</Text>
             <Text style={styles.carPrice}>{car.price}</Text>
@@ -112,7 +115,7 @@ export default function SuvScreen({ navigation }) {
       </View>
 
       {/* Contenido expandible: especificaciones */}
-      {expandedCar === car.id && (
+      {expandedCars[car.id] && (
         <View style={styles.specificationsContainer}>
           {/* Mostrar especificaciones si existen */}
           {car.specifications && car.specifications.length > 0 && (
@@ -139,10 +142,10 @@ export default function SuvScreen({ navigation }) {
         activeOpacity={0.7}
       >
         <Text style={styles.expandButtonText}>
-          {expandedCar === car.id ? 'Ver menos' : 'Ver más'}
+          {expandedCars[car.id] ? 'Ver menos' : 'Ver más'}
         </Text>
         <MaterialIcons 
-          name={expandedCar === car.id ? "keyboard-double-arrow-up" : "keyboard-double-arrow-down"} 
+          name={expandedCars[car.id] ? "keyboard-double-arrow-up" : "keyboard-double-arrow-down"} 
           size={20} 
           color="#FFFFFF" 
         />
@@ -170,16 +173,13 @@ export default function SuvScreen({ navigation }) {
             <MaterialIcons name="search" size={20} color="#666" style={styles.searchIcon} />
             <TextInput 
               style={styles.searchInput}
-              placeholder="search here....."
+              placeholder="buscar aquí..."
               placeholderTextColor="#666"
             />
             <TouchableOpacity style={styles.searchButton}>
-              <Text style={styles.searchButtonText}>Search</Text>
+              <Text style={styles.searchButtonText}>Buscar</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.backButton}>
-            <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
         </View>
 
         {/* Screen Title */}
@@ -293,11 +293,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 16,
-  },
-  backButton: {
-    padding: 12,
-    borderRadius: 6,
-    marginLeft: 8,
   },
   screenTitle: {
     fontSize: 32,

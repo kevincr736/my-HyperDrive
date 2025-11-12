@@ -86,16 +86,13 @@ export default function CatalogScreen({ navigation }) {
             <MaterialIcons name="search" size={20} color="#666" style={styles.searchIcon} />
             <TextInput 
               style={styles.searchInput}
-              placeholder="search here....."
+              placeholder="buscar aquí..."
               placeholderTextColor="#666"
             />
             <TouchableOpacity style={styles.searchButton}>
-              <Text style={styles.searchButtonText}>Search</Text>
+              <Text style={styles.searchButtonText}>Buscar</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.backButton}>
-            <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
         </View>
 
         {/* Content */}
@@ -138,7 +135,7 @@ export default function CatalogScreen({ navigation }) {
                 style={styles.seeMoreButton}
                 onPress={() => navigation.navigate(category.screen)}
               >
-                <Text style={styles.seeMoreText}>See More</Text>
+                <Text style={styles.seeMoreText}>Ver más</Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -229,11 +226,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 16,
-  },
-  backButton: {
-    padding: 12,
-    borderRadius: 6,
-    marginLeft: 8,
   },
   content: {
     flex: 1,

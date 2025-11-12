@@ -23,7 +23,7 @@ const Base64Image = ({ base64String, style, ...props }) => {
       <View style={[style, { backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={{ color: '#666', fontSize: 14 }}>Imagen no disponible</Text>
         <Text style={{ color: '#999', fontSize: 10, marginTop: 5 }}>
-          Base64: {base64String ? `${base64String.length} chars` : 'No data'}
+          Base64: {base64String ? `${base64String.length} chars` : 'Sin datos'}
         </Text>
       </View>
     );
@@ -51,7 +51,7 @@ export default function HomeScreen({ navigation }) {
   const [comments, setComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(true);
   const [isCommentModalVisible, setIsCommentModalVisible] = useState(false);
-  const [newComment, setNewComment] = useState({ text: '', category: 'Category', avatarUrl: '' });
+  const [newComment, setNewComment] = useState({ text: '', category: 'Categoría', avatarUrl: '' });
   const [creatingComment, setCreatingComment] = useState(false);
 
   // Función para obtener el vehículo mensual
@@ -85,6 +85,7 @@ export default function HomeScreen({ navigation }) {
           title: item.title,
           price: item.price,
           imageUri: item.imageBase64,
+          category: item.category, // Incluir la categoría del carro
         }));
         setModels(mapped);
       }
@@ -171,7 +172,7 @@ export default function HomeScreen({ navigation }) {
 
       if (data.success) {
         // Limpiar el formulario
-        setNewComment({ text: '', category: 'Category', avatarUrl: '' });
+        setNewComment({ text: '', category: 'Categoría', avatarUrl: '' });
         setIsCommentModalVisible(false);
         // Recargar comentarios
         fetchComments();
@@ -247,6 +248,7 @@ export default function HomeScreen({ navigation }) {
                 data={[
                   { title: 'Cargando...', price: '', imageUri: 'https://placehold.co/160x100' },
                 ]}
+                navigation={navigation}
               />
             ) : (
               <ModelsCarousel
@@ -257,6 +259,7 @@ export default function HomeScreen({ navigation }) {
                         { title: 'Sin modelos', price: '', imageUri: 'https://placehold.co/160x100' },
                       ]
                 }
+                navigation={navigation}
               />
             )}
 
@@ -363,7 +366,7 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.modalLabel}>Categoría</Text>
               <TextInput
                 style={styles.modalInput}
-                placeholder="Category"
+                placeholder="Categoría"
                 placeholderTextColor="#666"
                 value={newComment.category}
                 onChangeText={(category) => setNewComment({ ...newComment, category })}

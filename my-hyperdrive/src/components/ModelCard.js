@@ -2,13 +2,19 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { colors } from '../theme/colors';
 
-export default function ModelCard({ title, price, imageUri }) {
+export default function ModelCard({ title, price, imageUri, onPress }) {
   return (
     <View style={styles.card}>
       <Image source={{ uri: imageUri }} style={styles.image} />
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.price}>{price}</Text>
-      <TouchableOpacity style={styles.cta}><Text style={styles.ctaText}>See More</Text></TouchableOpacity>
+      <TouchableOpacity 
+        style={styles.cta}
+        onPress={onPress}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.ctaText}>Ver más</Text>
+      </TouchableOpacity>
     </View>
   );
 }

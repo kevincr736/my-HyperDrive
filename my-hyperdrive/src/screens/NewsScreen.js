@@ -317,9 +317,6 @@ export default function NewsScreen({ navigation }) {
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>NOTICIAS</Text>
-            <TouchableOpacity style={styles.backButton}>
-              <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
           </View>
 
           {/* Noticias */}
@@ -649,11 +646,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '800',
     fontSize: 14,
-  },
-  backButton: {
-    padding: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 
   card: {
